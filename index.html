@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeoLens - Spatial Visualizer & Reprojector</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Leaflet Geoman Drawing CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css" />
+    
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --sidebar-bg: rgba(30, 41, 59, 0.7);
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --input-bg-focus: rgba(15, 23, 42, 0.8);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent-color: #6366f1;
+            --accent-hover: #4f46e5;
+            --success-color: #10b981;
+            --success-hover: #059669;
+            --warning-color: #f59e0b;
+            --warning-hover: #d97706;
+            --danger-color: #ef4444;
+            
+            --map-controls-bg: rgba(30, 41, 59, 0.8);
+            --map-attribution-bg: rgba(15, 23, 42, 0.8);
+            --sidebar-shadow: rgba(0, 0, 0, 0.25);
+            --banner-bg-default: rgba(255, 255, 255, 0.02);
+            --status-success-text: #d1fae5;
+            --status-error-text: #fee2e2;
+            --status-info-text: #e0e7ff;
+
+            --sidebar-width: 450px;
+        }
+
+        :root.light-theme {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            --sidebar-bg: rgba(255, 255, 255, 0.7);
+            --input-bg: rgba(241, 245, 249, 0.6);
+            --input-bg-focus: #ffffff;
+            --border-color: rgba(0, 0, 0, 0.08);
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --accent-color: #4f46e5;
+            --accent-hover: #4338ca;
+            --success-color: #10b981;
+            --success-hover: #059669;
+            --warning-color: #d97706;
+            --warning-hover: #b45309;
+            --danger-color: #ef4444;
+
+            --map-controls-bg: rgba(255, 255, 255, 0.8);
+            --map-attribution-bg: rgba(248, 250, 252, 0.8);
+            --sidebar-shadow: rgba(0, 0, 0, 0.06);
+            --banner-bg-default: rgba(0, 0, 0, 0.02);
+            --status-success-text: #065f46;
+            --status-error-text: #991b1b;
+            --status-info-text: #3730a3;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* Split Screen Layout */
+        .container {
+            display: flex;
+            flex-direction: row-reverse;
+            width: 100%;
+            height: 100%;
+        }
+
+        #sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            backdrop-filter: blur(16px);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 10;
+            box-shadow: -10px 0 30px var(--sidebar-shadow);
+            transition: transform 0.3s ease;
+        }
+
+        #map-container {
+            flex: 1;
+            height: 100%;
+            position: relative;
+            background-color: var(--bg-primary);
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Mouse Coordinate Display */
+        .coord-display {
+            position: absolute;
+            bottom: 8px;
+            left: 8px;
+            background: var(--map-attribution-bg);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 0.35rem 0.65rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-primary);
+            z-index: 1000;
+            pointer-events: none;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .coord-display .coord-label {
+            color: var(--text-secondary);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+        }
+
+        .coord-display .coord-value {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
+        /* Header Style */
+        .sidebar-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15) 0%, rgba(30, 41, 59, 0) 100%);
+        }
+
+        .sidebar-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo-title {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .logo-icon {
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+
+        .subtitle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /* Sidebar Content Scroll Area */
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Form Group */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-label-small {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .format-badge {
+            font-size: 0.7rem;
+            padding: 0.15rem 0.4rem;
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-color);
+            border-radius: 4px;
+            text-transform: none;
+            font-weight: 500;
+        }
+
+        /* Text Area / Editor */
+        .editor-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        textarea {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            padding: 0.75rem;
+            resize: vertical;
+            outline: none;
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+            background-color: var(--input-bg-focus);
+        }
+
+        #editor {
+            height: 180px;
+        }
+
+        /* Input Controls */
+        .input-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-end;
+        }
+
+        .input-field-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background-color: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 0.6rem 0.75rem;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+            background-color: var(--input-bg-focus);
+        }
+
+        .btn-fetch {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-fetch:hover {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #ffffff;
+        }
+
+        #proj4-def-container {
+            transition: all 0.3s ease;
+        }
+
+        #proj4-def {
+            height: 80px;
+            font-size: 0.75rem;
+        }
+
+        /* Action Buttons Area */
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.65rem 0.5rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            user-select: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .btn-accent {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-accent:hover {
+            background-color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            color: var(--warning-color);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-warning:hover {
+            background-color: var(--warning-color);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .btn-theme {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+            font-size: 1rem;
+        }
+
+        .btn-theme:hover {
+            background-color: var(--bg-tertiary);
+            border-color: var(--accent-color);
+            transform: scale(1.05);
+        }
+
+        /* Copy Dropdown Styles */
+        .dropdown-container {
+            position: relative;
+        }
+
+        .dropdown-container .btn {
+            width: 100%;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
+            margin-bottom: 0.5rem;
+            display: none;
+            flex-direction: column;
+            z-index: 50;
+            overflow: hidden;
+            animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .dropdown-menu.show {
+            display: flex;
+        }
+
+        .dropdown-item {
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-align: left;
+            background: none;
+            border: none;
+            width: 100%;
+            transition: all 0.15s;
+        }
+
+        .dropdown-item:hover {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--text-primary);
+        }
+
+
+        /* Status Banner */
+        .status-banner {
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            border-left: 4px solid transparent;
+            background-color: var(--banner-bg-default);
+            transition: all 0.25s ease;
+        }
+
+        .status-banner.success {
+            border-left-color: var(--success-color);
+            background-color: rgba(16, 185, 129, 0.08);
+            color: var(--status-success-text);
+        }
+
+        .status-banner.error {
+            border-left-color: var(--danger-color);
+            background-color: rgba(239, 68, 68, 0.08);
+            color: var(--status-error-text);
+        }
+
+        .status-banner.info {
+            border-left-color: var(--accent-color);
+            background-color: rgba(99, 102, 241, 0.08);
+            color: var(--status-info-text);
+        }
+
+        .status-title {
+            font-weight: 600;
+        }
+
+        .status-message {
+            opacity: 0.95;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        /* Format Helper drawer */
+        .format-helper {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--input-bg);
+            overflow: hidden;
+        }
+
+        .helper-header {
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--banner-bg-default);
+        }
+
+        .helper-body {
+            padding: 0.75rem 1rem;
+            border-top: 1px solid var(--border-color);
+            display: none;
+            flex-direction: column;
+            gap: 0.75rem;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .helper-body.show {
+            display: flex;
+        }
+
+        .example-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .example-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .example-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            background-color: var(--bg-tertiary);
+            padding: 0.3rem 0.5rem;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+            white-space: nowrap;
+            overflow-x: auto;
+            color: var(--text-primary);
+        }
+
+
+        /* Floating Toast Style */
+        .toast {
+            position: fixed;
+            bottom: 32px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--accent-color);
+            color: var(--text-primary);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            z-index: 99999;
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Dark Leaflet Controls */
+        .leaflet-bar a, .leaflet-control-layers, .leaflet-bar, .leaflet-control-zoom {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+        .leaflet-bar a:hover {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+        .leaflet-control-layers-expanded {
+            background: var(--bg-secondary) !important;
+            color: var(--text-primary) !important;
+            border: 1px solid var(--border-color) !important;
+        }
+        .leaflet-control-layers-base label, .leaflet-control-layers-overlays label {
+            color: var(--text-primary) !important;
+        }
+
+        /* Dark Scale & Attribution */
+        .leaflet-control-scale-line {
+            background: var(--map-controls-bg) !important;
+            border-color: var(--text-secondary) !important;
+            color: var(--text-primary) !important;
+        }
+        .leaflet-control-attribution {
+            background: var(--map-attribution-bg) !important;
+            color: var(--text-secondary) !important;
+        }
+        .leaflet-control-attribution a {
+            color: var(--accent-color) !important;
+        }
+
+        /* Animations */
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Responsive Layout */
+        @media (max-width: 768px) {
+            body {
+                overflow: auto;
+            }
+            .container {
+                flex-direction: column;
+            }
+            #sidebar {
+                width: 100%;
+                height: auto;
+                border-left: none;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+            }
+            #map-container {
+                width: 100%;
+                height: 50vh;
+                order: -1; /* Map on top for mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Controls Panel -->
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-header-row">
+                    <div class="logo-title">
+                        <span class="logo-icon">
+                            <svg class="logo-svg" viewBox="0 0 24 24" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <!-- Outer ring of aperture / lens -->
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.6"/>
+                                <!-- Globe grid lines -->
+                                <path d="M12 2C12 2 16 6 16 12C16 18 12 22 12 22C12 22 8 18 8 12C8 6 12 2 12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M2 12H22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <!-- Camera lens aperture circle / crosshair center -->
+                                <circle cx="12" cy="12" r="4" stroke="var(--accent-color)" stroke-width="2"/>
+                                <circle cx="12" cy="12" r="1.5" fill="var(--accent-color)"/>
+                            </svg>
+                        </span>
+                        <h1>GeoLens</h1>
+                    </div>
+                    <button id="btn-theme-toggle" class="btn-theme" title="Toggle Light/Dark Mode">☀️</button>
+                </div>
+                <div class="subtitle">Parse, reproject & share vector geometries</div>
+            </div>
+            
+            <div class="sidebar-content">
+                <!-- Data Editor Section -->
+                <div class="form-group">
+                    <label for="editor">
+                        Spatial Input
+                        <span class="format-badge" id="format-badge">Auto Detect</span>
+                    </label>
+                    <div class="editor-wrapper">
+                        <textarea id="editor" placeholder="Paste WKT, Hex WKB, EWKB, GeoJSON, Geohash, or H3 index here..."></textarea>
+                    </div>
+                </div>
+
+                <!-- CRS & Projection Configuration -->
+                <div class="form-group">
+                    <label for="epsg">Coordinate Reference System</label>
+                    <div class="input-row">
+                        <div class="input-field-wrapper">
+                            <span class="input-label-small">EPSG Code</span>
+                            <input type="text" id="epsg" value="4326" placeholder="e.g. 4326, 3857, 27700">
+                        </div>
+                        <button class="btn-fetch" id="btn-fetch-epsg" title="Lookup & Register Projection">Load CRS</button>
+                    </div>
+                </div>
+
+                <!-- Proj4 definition display -->
+                <div class="form-group" id="proj4-def-container">
+                    <label for="proj4-def">Proj4 Definition (Editable)</label>
+                    <textarea id="proj4-def" placeholder="+proj=longlat +datum=WGS84 +no_defs"></textarea>
+                </div>
+
+                <!-- Action Button Grid -->
+                <div class="action-grid" id="action-grid">
+                    <button class="btn btn-warning" id="btn-clear">🗑 Clear</button>
+                    <button class="btn btn-accent" id="btn-example">💡 Example</button>
+                    <button class="btn btn-accent" id="btn-import">📂 Import</button>
+
+                    <div class="dropdown-container">
+                        <button class="btn btn-accent" id="btn-copy-dropdown">📋 Copy ▼</button>
+                        <div class="dropdown-menu" id="copy-menu">
+                            <button class="dropdown-item" data-format="wkt">WKT (Well-known Text)</button>
+                            <button class="dropdown-item" data-format="wkb">WKB (Hex Binary)</button>
+                            <button class="dropdown-item" data-format="ewkb">EWKB (Hex with SRID)</button>
+                            <button class="dropdown-item" data-format="geojson">GeoJSON</button>
+                            <button class="dropdown-item" data-format="bbox">Bounding Box (BBOX)</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hidden file input for import -->
+                <input type="file" id="file-input" accept=".wkt,.geojson,.json,.wkb,.txt" style="display: none;">
+
+                <!-- Validation & Feedback Banner -->
+                <div class="status-banner info" id="status-banner">
+                    <div class="status-title" id="status-title">System Status</div>
+                    <div class="status-message" id="status-message">Ready. Paste spatial data to begin.</div>
+                </div>
+
+                <!-- Expandable Cheat Sheet -->
+                <div class="format-helper">
+                    <div class="helper-header" id="helper-header">
+                        <span>💡 Supported Formats Reference</span>
+                        <span id="helper-chevron">▼</span>
+                    </div>
+                    <div class="helper-body" id="helper-body">
+                        <div class="example-item">
+                            <span class="example-title">WKT (Point)</span>
+                            <span class="example-code">POINT(-74.006 40.7128)</span>
+                        </div>
+                        <div class="example-item">
+                            <span class="example-title">WKT (Polygon in EPSG:27700)</span>
+                            <span class="example-code">POLYGON((453000 310000, 453100 310000, 453100 310100, 453000 310100, 453000 310000))</span>
+                        </div>
+                        <div class="example-item">
+                            <span class="example-title">WKB Hex (WGS84 Point)</span>
+                            <span class="example-code">0101000000000000000000f03f0000000000000040</span>
+                        </div>
+                        <div class="example-item">
+                            <span class="example-title">EWKB Hex (Point with SRID 4326)</span>
+                            <span class="example-code">0101000020E6100000000000000000f03f0000000000000040</span>
+                        </div>
+                        <div class="example-item">
+                            <span class="example-title">Geohash</span>
+                            <span class="example-code">dr5reg</span>
+                        </div>
+                        <div class="example-item">
+                            <span class="example-title">Uber H3 Hex</span>
+                            <span class="example-code">852a1077fffffff</span>
+                        </div>
+                        <div class="example-item">
+                            <span class="example-title">GeoJSON Geometry</span>
+                            <span class="example-code">{"type":"Point","coordinates":[-74,40.7]}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+        <!-- Interactive Map Panel -->
+        <div id="map-container">
+            <div id="map"></div>
+            <div class="coord-display" id="coord-display">
+                <span class="coord-label">X:</span><span class="coord-value" id="coord-x">—</span>
+                <span class="coord-label">Y:</span><span class="coord-value" id="coord-y">—</span>
+                <span class="coord-label" id="coord-epsg-label">EPSG:4326</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- CDN Libraries Dependencies -->
+    <!-- Leaflet JS -->
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Leaflet Geoman Drawing Tools -->
+    <script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
+    
+    <!-- Proj4js Coordinate Projections -->
+    <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.min.js"></script>
+    
+    <!-- Mapbox Wellknown (WKT <-> GeoJSON) -->
+    <script src="https://cdn.jsdelivr.net/npm/wellknown@0.5.0/wellknown.js"></script>
+    
+    <!-- Buffer Polyfill for browser binary parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+    <script>
+        if (typeof window.buffer !== 'undefined') {
+            window.Buffer = window.buffer.Buffer;
+        }
+    </script>
+    
+    <!-- wkx (WKB <-> GeoJSON) -->
+    <script src="https://cdn.jsdelivr.net/npm/wkx@0.5.0/dist/wkx.min.js"></script>
+    
+    <!-- Uber H3 Geospatial Hexagon library -->
+    <script src="https://cdn.jsdelivr.net/npm/h3-js@4.1.0/dist/h3-js.umd.js"></script>
+
+
+    <!-- Main Application JavaScript Logic -->
+    <script>
+
+        // Common EPSG projections cache
+        const COMMON_PROJECTIONS = {
+            '4326': '+proj=longlat +datum=WGS84 +no_defs',
+            '3857': '+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs',
+            '4269': '+proj=longlat +ellps=GRS80 +datum=NAD83 +no_defs',
+            '27700': '+proj=tmerc +lat_0=49 +lon_0=-2 +k=0.9996012717 +x_0=400000 +y_0=-100000 +ellps=airy +datum=OSGB36 +units=m +no_defs',
+            '3035': '+proj=laea +lat_0=52 +lon_0=10 +x_0=4321000 +y_0=3210000 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs',
+            '2263': '+proj=lcc +lat_1=41.03333333333333 +lat_2=40.66666666666666 +lat_0=40.16666666666666 +lon_0=-74 +x_0=300000.0000000001 +y_0=0 +ellps=GRS80 +datum=NAD83 +to_meter=0.3048006096012192 +no_defs',
+            '2264': '+proj=lcc +lat_1=36.16666666666666 +lat_2=34.33333333333334 +lat_0=33.75 +lon_0=-79 +x_0=609601.2192024384 +y_0=0 +ellps=GRS80 +datum=NAD83 +to_meter=0.3048006096012192 +no_defs',
+            '32631': '+proj=utm +zone=31 +datum=WGS84 +units=m +no_defs',
+            '32632': '+proj=utm +zone=32 +datum=WGS84 +units=m +no_defs',
+            '32633': '+proj=utm +zone=33 +datum=WGS84 +units=m +no_defs'
+        };
+
+        const PROJ4_DEFS_CACHE = { ...COMMON_PROJECTIONS };
+
+        // Initialize loaded projections with standard coordinate reference systems
+        Object.entries(COMMON_PROJECTIONS).forEach(([epsg, def]) => {
+            proj4.defs(`EPSG:${epsg}`, def);
+        });
+
+        // App State
+        let map;
+        let drawnItems;
+        let isUpdatingFromMap = false;
+        let currentEpsg = '4326';
+        let darkLayer;
+        let lightLayer;
+
+        // Utility: throttle high-frequency event callbacks
+        function throttle(fn, delay) {
+            let lastCall = 0;
+            return function(...args) {
+                const now = Date.now();
+                if (now - lastCall >= delay) {
+                    lastCall = now;
+                    fn.apply(this, args);
+                }
+            };
+        }
+
+        // Utility: copy text to clipboard with execCommand fallback
+        function copyToClipboard(text) {
+            return navigator.clipboard.writeText(text).catch(() => {
+                const dummy = document.createElement('textarea');
+                document.body.appendChild(dummy);
+                dummy.value = text;
+                dummy.select();
+                document.execCommand('copy');
+                document.body.removeChild(dummy);
+            });
+        }
+
+        // Theme Toggling Logic
+        function setTheme(theme) {
+            const btnTheme = document.getElementById('btn-theme-toggle');
+            if (theme === 'light') {
+                document.documentElement.classList.add('light-theme');
+                if (btnTheme) btnTheme.textContent = '🌙';
+                if (map && darkLayer && lightLayer && map.hasLayer(darkLayer)) {
+                    map.removeLayer(darkLayer);
+                    lightLayer.addTo(map);
+                }
+                localStorage.setItem('wkt_viewer_theme', 'light');
+            } else {
+                document.documentElement.classList.remove('light-theme');
+                if (btnTheme) btnTheme.textContent = '☀️';
+                if (map && darkLayer && lightLayer && map.hasLayer(lightLayer)) {
+                    map.removeLayer(lightLayer);
+                    darkLayer.addTo(map);
+                }
+                localStorage.setItem('wkt_viewer_theme', 'dark');
+            }
+        }
+
+        function toggleTheme() {
+            const isLight = document.documentElement.classList.contains('light-theme');
+            setTheme(isLight ? 'dark' : 'light');
+        }
+
+        // Initialize Theme early to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('wkt_viewer_theme');
+            if (savedTheme === 'light') {
+                document.documentElement.classList.add('light-theme');
+            } else if (savedTheme === 'dark') {
+                document.documentElement.classList.remove('light-theme');
+            } else {
+                // First open: check system preferences and initialize state
+                const userPrefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+                if (userPrefersLight) {
+                    document.documentElement.classList.add('light-theme');
+                } else {
+                    document.documentElement.classList.remove('light-theme');
+                }
+            }
+        })();
+
+        // Listen to system theme changes (only if user hasn't explicitly set a preference)
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+                const savedTheme = localStorage.getItem('wkt_viewer_theme');
+                if (!savedTheme) {
+                    setTheme(e.matches ? 'light' : 'dark');
+                }
+            });
+        }
+
+        // DOM elements
+        const editor = document.getElementById('editor');
+        const epsgInput = document.getElementById('epsg');
+        const proj4Input = document.getElementById('proj4-def');
+        const btnFetchEpsg = document.getElementById('btn-fetch-epsg');
+        const statusBanner = document.getElementById('status-banner');
+        const statusTitle = document.getElementById('status-title');
+        const statusMessage = document.getElementById('status-message');
+        const formatBadge = document.getElementById('format-badge');
+        const helperHeader = document.getElementById('helper-header');
+        const helperBody = document.getElementById('helper-body');
+        const helperChevron = document.getElementById('helper-chevron');
+        const toast = document.getElementById('toast');
+        const toastText = document.getElementById('toast-text');
+        
+        // Copy Dropdown elements
+        const btnCopyDropdown = document.getElementById('btn-copy-dropdown');
+        const copyMenu = document.getElementById('copy-menu');
+
+        // Initial Map Setup
+        function initMap() {
+            // Default center is WGS84 coordinates
+            map = L.map('map', {
+                center: [20, 0],
+                zoom: 2,
+                zoomControl: true
+            });
+
+            // Base Layers definitions
+            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            });
+
+            const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17,
+                attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
+            });
+
+            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            });
+
+            darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            });
+
+            lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            });
+
+            // Add correct default layer based on active theme
+            const isLightTheme = document.documentElement.classList.contains('light-theme');
+            if (isLightTheme) {
+                lightLayer.addTo(map);
+            } else {
+                darkLayer.addTo(map);
+            }
+
+            const baseMaps = {
+                "Sleek Dark": darkLayer,
+                "Sleek Light": lightLayer,
+                "OpenStreetMap": osm,
+                "Terrain Topo": topo,
+                "Satellite Imagery": satellite
+            };
+
+            L.control.layers(baseMaps).addTo(map);
+
+            // Group for drawn items
+            drawnItems = L.featureGroup().addTo(map);
+
+            // Setup Leaflet Geoman Controls
+            map.pm.addControls({
+                position: 'topright',
+                drawMarker: true,
+                drawCircleMarker: true,
+                drawPolyline: true,
+                drawRectangle: true,
+                drawPolygon: true,
+                drawCircle: true,
+                editMode: true,
+                dragMode: true,
+                cutPolygon: false,
+                removalMode: true
+            });
+
+            // Set drawing options
+            map.pm.setPathOptions({
+                color: '#6366f1',
+                fillColor: '#6366f1',
+                fillOpacity: 0.2
+            });
+
+            // Mouse coordinate tracking
+            const coordX = document.getElementById('coord-x');
+            const coordY = document.getElementById('coord-y');
+            const coordEpsgLabel = document.getElementById('coord-epsg-label');
+
+            map.on('mousemove', throttle(function(e) {
+                try {
+                    const targetProj = `EPSG:${currentEpsg}`;
+                    if (targetProj === 'EPSG:4326') {
+                        coordX.textContent = e.latlng.lng.toFixed(6);
+                        coordY.textContent = e.latlng.lat.toFixed(6);
+                    } else {
+                        const projected = proj4('EPSG:4326', targetProj, [e.latlng.lng, e.latlng.lat]);
+                        coordX.textContent = projected[0].toFixed(2);
+                        coordY.textContent = projected[1].toFixed(2);
+                    }
+                    coordEpsgLabel.textContent = 'EPSG:' + currentEpsg;
+                } catch (err) {
+                    coordX.textContent = e.latlng.lng.toFixed(6);
+                    coordY.textContent = e.latlng.lat.toFixed(6);
+                }
+            }, 50));
+
+            // Map listeners for Leaflet Geoman events
+            map.on('pm:create', (e) => {
+                const layer = e.layer;
+                drawnItems.addLayer(layer);
+                
+                // Set path styling for the newly drawn layer
+                if (layer.setStyle) {
+                    layer.setStyle({
+                        color: '#6366f1',
+                        fillColor: '#6366f1',
+                        fillOpacity: 0.2
+                    });
+                }
+                
+                layer.on('pm:edit', syncMapToTextarea);
+                layer.on('pm:update', syncMapToTextarea);
+                syncMapToTextarea();
+            });
+
+            map.on('pm:remove', (e) => {
+                syncMapToTextarea();
+            });
+        }
+
+        // Convert Leaflet Circle to GeoJSON Polygon (geodesic approximation)
+        function circleToGeoJSON(layer) {
+            const center = layer.getLatLng();
+            const radiusM = layer.getRadius();
+            const segments = 64;
+            const coords = [];
+            const R = 6371000; // Earth radius in meters
+
+            const latRad = center.lat * Math.PI / 180;
+            const lngRad = center.lng * Math.PI / 180;
+            const angularDist = radiusM / R;
+
+            for (let i = 0; i < segments; i++) {
+                const bearing = (i / segments) * 2 * Math.PI;
+                const destLat = Math.asin(
+                    Math.sin(latRad) * Math.cos(angularDist) +
+                    Math.cos(latRad) * Math.sin(angularDist) * Math.cos(bearing)
+                );
+                const destLng = lngRad + Math.atan2(
+                    Math.sin(bearing) * Math.sin(angularDist) * Math.cos(latRad),
+                    Math.cos(angularDist) - Math.sin(latRad) * Math.sin(destLat)
+                );
+                coords.push([destLng * 180 / Math.PI, destLat * 180 / Math.PI]);
+            }
+            coords.push(coords[0]); // close the ring
+
+            return {
+                type: 'Polygon',
+                coordinates: [coords]
+            };
+        }
+
+        // Decode Geohash to coordinate bounding box
+        function decodeGeohash(geohash) {
+            const BITS = [16, 8, 4, 2, 1];
+            const BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+            let isEven = true;
+            let latMin = -90, latMax = 90;
+            let lonMin = -180, lonMax = 180;
+            
+            for (let i = 0; i < geohash.length; i++) {
+                const c = geohash[i].toLowerCase();
+                const cd = BASE32.indexOf(c);
+                if (cd === -1) throw new Error("Invalid geohash character: " + c);
+                for (let j = 0; j < 5; j++) {
+                    const mask = BITS[j];
+                    if (isEven) {
+                        const lonMid = (lonMin + lonMax) / 2;
+                        if ((cd & mask) !== 0) {
+                            lonMin = lonMid;
+                        } else {
+                            lonMax = lonMid;
+                        }
+                    } else {
+                        const latMid = (latMin + latMax) / 2;
+                        if ((cd & mask) !== 0) {
+                            latMin = latMid;
+                        } else {
+                            latMax = latMid;
+                        }
+                    }
+                    isEven = !isEven;
+                }
+            }
+            return {
+                latMin, latMax, lonMin, lonMax,
+                lat: (latMin + latMax) / 2,
+                lon: (lonMin + lonMax) / 2
+            };
+        }
+
+        // Reproject coordinate arrays in GeoJSON recursively
+        function reprojectGeoJSON(geojson, fromProj, toProj) {
+            if (!geojson) return null;
+            if (fromProj === toProj) return geojson;
+            
+            const cloned = JSON.parse(JSON.stringify(geojson));
+            
+            const project = (coords) => {
+                try {
+                    const transformed = proj4(fromProj, toProj, coords);
+                    return [transformed[0], transformed[1]];
+                } catch (e) {
+                    console.error("Coordinate reprojection error:", e);
+                    return coords; // fallback
+                }
+            };
+            
+            const traverseCoordinates = (geometry) => {
+                if (!geometry) return;
+                const type = geometry.type;
+                if (type === 'Point') {
+                    geometry.coordinates = project(geometry.coordinates);
+                } else if (type === 'LineString' || type === 'MultiPoint') {
+                    geometry.coordinates = geometry.coordinates.map(project);
+                } else if (type === 'Polygon' || type === 'MultiLineString') {
+                    geometry.coordinates = geometry.coordinates.map(ring => ring.map(project));
+                } else if (type === 'MultiPolygon') {
+                    geometry.coordinates = geometry.coordinates.map(poly => poly.map(ring => ring.map(project)));
+                } else if (type === 'GeometryCollection') {
+                    geometry.geometries.forEach(traverseCoordinates);
+                }
+            };
+            
+            if (cloned.type === 'FeatureCollection') {
+                cloned.features.forEach(f => traverseCoordinates(f.geometry));
+            } else if (cloned.type === 'Feature') {
+                traverseCoordinates(cloned.geometry);
+            } else {
+                traverseCoordinates(cloned);
+            }
+            return cloned;
+        }
+
+        // Identify format and parse input text into WGS84 GeoJSON
+        function parseInput(inputStr, activeProj) {
+            inputStr = inputStr.trim();
+            if (!inputStr) return null;
+            
+            // 1. Detect GeoJSON
+            if (inputStr.startsWith('{') || inputStr.startsWith('[')) {
+                formatBadge.textContent = "GeoJSON";
+                try {
+                    const geojson = JSON.parse(inputStr);
+                    return reprojectGeoJSON(geojson, activeProj, 'EPSG:4326');
+                } catch (e) {
+                    throw new Error("Invalid GeoJSON JSON: " + e.message);
+                }
+            }
+            
+            // 2. Detect Uber H3 Hex Index
+            if (/^[89][a-fA-F0-9]{14}$/.test(inputStr)) {
+                formatBadge.textContent = "Uber H3 Index";
+                if (typeof h3 === 'undefined') {
+                    throw new Error("Uber H3 library was not successfully loaded.");
+                }
+                try {
+                    let coords;
+                    if (typeof h3.cellToBoundary === 'function') {
+                        coords = h3.cellToBoundary(inputStr);
+                    } else if (typeof h3.h3ToGeoBoundary === 'function') {
+                        coords = h3.h3ToGeoBoundary(inputStr);
+                    }
+                    if (!coords) throw new Error("Unable to resolve boundary vertices.");
+                    // h3 yields coordinates in [lat, lon], GeoJSON expects [lon, lat]
+                    const geojsonCoords = coords.map(c => [c[1], c[0]]);
+                    geojsonCoords.push([geojsonCoords[0][0], geojsonCoords[0][1]]); // close polygon loop
+                    return {
+                        type: "Polygon",
+                        coordinates: [geojsonCoords]
+                    };
+                } catch (e) {
+                    throw new Error("H3 Parsing Failure: " + e.message);
+                }
+            }
+            
+            // 3. Detect Geohash (standard base32 length 3 to 12)
+            if (/^[0-9b-hjkmnp-z]{3,12}$/i.test(inputStr)) {
+                formatBadge.textContent = "Geohash";
+                try {
+                    const box = decodeGeohash(inputStr);
+                    return {
+                        type: "Polygon",
+                        coordinates: [[
+                            [box.lonMin, box.latMin],
+                            [box.lonMax, box.latMin],
+                            [box.lonMax, box.latMax],
+                            [box.lonMin, box.latMax],
+                            [box.lonMin, box.latMin]
+                        ]]
+                    };
+                } catch (e) {
+                    // Fall back to subsequent tests in case it was not a valid geohash
+                }
+            }
+            
+            // 4. Detect Hex WKB or EWKB
+            if (/^[0-9a-fA-F]+$/.test(inputStr)) {
+                formatBadge.textContent = "Hex WKB";
+                try {
+                    const buffer = Buffer.from(inputStr, 'hex');
+                    const geom = wkx.Geometry.parse(buffer);
+                    const geojson = geom.toGeoJSON();
+                    
+                    let geomProj = activeProj;
+                    if (geom.srid) {
+                        formatBadge.textContent = `EWKB (SRID:${geom.srid})`;
+                        geomProj = `EPSG:${geom.srid}`;
+                        if (geom.srid.toString() !== currentEpsg) {
+                            epsgInput.value = geom.srid;
+                            loadEpsgDefinition(geom.srid.toString());
+                        }
+                    }
+                    return reprojectGeoJSON(geojson, geomProj, 'EPSG:4326');
+                } catch (e) {
+                    throw new Error("WKB/EWKB binary parsing failure: " + e.message);
+                }
+            }
+            
+            // 5. Default: Parse WKT representation
+            formatBadge.textContent = "WKT (Well-known Text)";
+            try {
+                // Remove potential SRID prefix in EWKT (e.g., SRID=4326;POINT(1 2))
+                let wktStr = inputStr;
+                let geomProj = activeProj;
+                const sridMatch = inputStr.match(/^SRID=(\d+);(.*)/i);
+                if (sridMatch) {
+                    formatBadge.textContent = `EWKT (SRID:${sridMatch[1]})`;
+                    geomProj = `EPSG:${sridMatch[1]}`;
+                    wktStr = sridMatch[2];
+                    if (sridMatch[1] !== currentEpsg) {
+                        epsgInput.value = sridMatch[1];
+                        loadEpsgDefinition(sridMatch[1]);
+                    }
+                }
+                
+                const geojson = wellknown.parse(wktStr);
+                if (!geojson) {
+                    throw new Error("Parser returned null coordinate geometry. Verify string syntax.");
+                }
+                return reprojectGeoJSON(geojson, geomProj, 'EPSG:4326');
+            } catch (e) {
+                throw new Error("WKT Parsing Failure: " + e.message);
+            }
+        }
+
+        // Render GeoJSON coordinates on the map
+        function renderOnMap(geojson) {
+            drawnItems.clearLayers();
+            if (!geojson) return;
+
+            const leafletLayer = L.geoJSON(geojson, {
+                style: {
+                    color: '#6366f1',
+                    fillColor: '#6366f1',
+                    fillOpacity: 0.2,
+                    weight: 3
+                },
+                pointToLayer: function (feature, latlng) {
+                    // Render Point/MultiPoint as markers or circle markers
+                    return L.circleMarker(latlng, {
+                        radius: 7,
+                        fillColor: '#6366f1',
+                        color: '#ffffff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.8
+                    });
+                },
+                onEachFeature: function(feature, layer) {
+                    // Enable editing on new layers
+                    layer.on('pm:edit', syncMapToTextarea);
+                    layer.on('pm:update', syncMapToTextarea);
+                }
+            });
+
+            leafletLayer.eachLayer(layer => {
+                drawnItems.addLayer(layer);
+            });
+
+            // Adjust bounds to show the rendered data
+            if (drawnItems.getLayers().length > 0) {
+                const bounds = drawnItems.getBounds();
+                if (bounds.isValid()) {
+                    map.fitBounds(bounds, { maxZoom: 16, padding: [40, 40] });
+                }
+            }
+        }
+
+        // Build GeoJSON (EPSG:4326) from map drawn layers — shared by sync, copy, download
+        function buildGeoJSONFromLayers(targetProj) {
+            const layers = [];
+            drawnItems.eachLayer(layer => {
+                if (layer.pm && !layer._pmTemp) {
+                    layers.push(layer);
+                }
+            });
+            if (layers.length === 0) return null;
+
+            const geomFromLayer = (layer) => {
+                if (layer instanceof L.Circle) {
+                    return circleToGeoJSON(layer);
+                }
+                return layer.toGeoJSON().geometry;
+            };
+
+            let geojson;
+            if (layers.length === 1) {
+                geojson = geomFromLayer(layers[0]);
+            } else {
+                geojson = {
+                    type: 'GeometryCollection',
+                    geometries: layers.map(geomFromLayer)
+                };
+            }
+
+            // Project once: EPSG:4326 → targetProj
+            return reprojectGeoJSON(geojson, 'EPSG:4326', targetProj);
+        }
+
+        // Read Map drawn geometries and update textarea input
+        function syncMapToTextarea() {
+            if (isUpdatingFromMap) return;
+            isUpdatingFromMap = true;
+
+            try {
+                const activeProj = `EPSG:${currentEpsg}`;
+                const outputGeojson = buildGeoJSONFromLayers(activeProj);
+
+                if (!outputGeojson) {
+                    editor.value = '';
+                    formatBadge.textContent = "Auto Detect";
+                    showStatus('info', 'System Status', 'Map is empty. Draw features or paste data.');
+                    isUpdatingFromMap = false;
+                    saveCurrentState();
+                    return;
+                }
+
+                const wktStr = wellknown.stringify(outputGeojson);
+                editor.value = wktStr;
+                formatBadge.textContent = "WKT (Well-known Text)";
+                const geomType = getGeometryType(outputGeojson);
+                // Count layers from the raw drawnItems (before projection)
+                let layerCount = 0;
+                drawnItems.eachLayer(l => { if (l.pm && !l._pmTemp) layerCount++; });
+                showStatus('success', 'Geometry Updated', `Synced ${layerCount} ${geomType} feature(s) in EPSG:${currentEpsg}.`);
+            } catch (e) {
+                console.error("Sync error:", e);
+                showStatus('error', 'Sync Failure', e.message);
+            } finally {
+                isUpdatingFromMap = false;
+                saveCurrentState();
+            }
+        }
+
+        // Parse Textarea and Render
+        function syncTextareaToMap() {
+            if (isUpdatingFromMap) return;
+            
+            const textVal = editor.value.trim();
+            if (!textVal) {
+                drawnItems.clearLayers();
+                formatBadge.textContent = "Auto Detect";
+                showStatus('info', 'System Status', 'Editor cleared.');
+                saveCurrentState();
+                return;
+            }
+
+            try {
+                const activeProj = `EPSG:${currentEpsg}`;
+                const parsedGeojson = parseInput(textVal, activeProj);
+                
+                if (parsedGeojson) {
+                    renderOnMap(parsedGeojson);
+
+                    let featureCount = 0;
+                    if (parsedGeojson.type === 'FeatureCollection') {
+                        featureCount = parsedGeojson.features.length;
+                    } else if (parsedGeojson.type === 'GeometryCollection') {
+                        featureCount = parsedGeojson.geometries.length;
+                    } else {
+                        featureCount = 1;
+                    }
+
+                    const geomType = getGeometryType(parsedGeojson);
+                    showStatus('success', 'Parsed Successfully', `Visualized ${featureCount} ${geomType} feature(s) on the map.`);
+                }
+            } catch (e) {
+                showStatus('error', 'Parsing Failure', e.message);
+            }
+            saveCurrentState();
+        }
+
+        // Show toast alert (clears previous timer to prevent premature dismissal)
+        let _toastTimer = null;
+        function showToast(message) {
+            if (_toastTimer) clearTimeout(_toastTimer);
+            toastText.textContent = message;
+            toast.classList.add('show');
+            _toastTimer = setTimeout(() => {
+                toast.classList.remove('show');
+                _toastTimer = null;
+            }, 3000);
+        }
+
+        // Display status feedback banner
+        function showStatus(type, title, message) {
+            statusBanner.className = `status-banner ${type}`;
+            statusTitle.textContent = title;
+            statusMessage.textContent = message;
+        }
+
+        // Dynamic CRS EPSG projection fetcher
+        function loadEpsgDefinition(epsgCode, onComplete) {
+            epsgCode = epsgCode.trim();
+            if (!epsgCode) return;
+            // Validate EPSG code format (4-5 digits, numeric)
+            if (!/^\d{4,5}$/.test(epsgCode)) {
+                showStatus('error', 'Invalid EPSG Code', `"${epsgCode}" is not a valid EPSG code. Expected 4-5 digit number (e.g. 4326).`);
+                return;
+            }
+
+            currentEpsg = epsgCode;
+
+            // Check if projection already defined
+            if (PROJ4_DEFS_CACHE[epsgCode]) {
+                const defStr = PROJ4_DEFS_CACHE[epsgCode];
+                proj4.defs(`EPSG:${epsgCode}`, defStr);
+                proj4Input.value = defStr;
+                showStatus('info', 'Projection Loaded', `CRS EPSG:${epsgCode} loaded from local definition cache.`);
+                if (onComplete) onComplete();
+                return;
+            }
+
+            showStatus('info', 'Resolving CRS...', `Fetching EPSG:${epsgCode} definition from epsg.io database...`);
+            
+            // Fetch raw proj4 definitions from API
+            fetch(`https://epsg.io/${epsgCode}.proj4`)
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP Error Status ${res.status}`);
+                    return res.text();
+                })
+                .then(proj4Str => {
+                    proj4Str = proj4Str.trim();
+                    if (!proj4Str) throw new Error("Empty projection payload received.");
+                    
+                    proj4.defs(`EPSG:${epsgCode}`, proj4Str);
+                    PROJ4_DEFS_CACHE[epsgCode] = proj4Str;
+                    proj4Input.value = proj4Str;
+                    showStatus('success', 'CRS Registered', `Coordinate Reference System EPSG:${epsgCode} registered successfully.`);
+                    
+                    // Reparse editor coordinates under new projection context
+                    syncTextareaToMap();
+                    
+                    if (onComplete) onComplete();
+                })
+                .catch(err => {
+                    console.error("CRS Fetch Error:", err);
+                    showStatus('error', 'CRS Resolve Error', `Could not lookup EPSG:${epsgCode} online (${err.message}).\nPlease paste or write the Proj4 definition below manually.`);
+                    // Fall back: Enable manual entry editing of Proj4 parameter
+                    proj4Input.readOnly = false;
+                });
+        }
+
+        // Local Storage State Persistence (debounced to avoid writes on every keystroke)
+        let _saveDebounce = null;
+        function saveCurrentState() {
+            if (_saveDebounce) clearTimeout(_saveDebounce);
+            _saveDebounce = setTimeout(() => {
+                try {
+                    localStorage.setItem('wkt_viewer_editor_val', editor.value);
+                    localStorage.setItem('wkt_viewer_epsg_val', epsgInput.value);
+                    localStorage.setItem('wkt_viewer_proj4_val', proj4Input.value);
+                } catch (e) {
+                    console.error("Local storage error:", e);
+                }
+                _saveDebounce = null;
+            }, 300);
+        }
+
+        function restoreSavedState() {
+            try {
+                // Restore cached local storage values
+                const savedEditor = localStorage.getItem('wkt_viewer_editor_val');
+                const savedEpsg = localStorage.getItem('wkt_viewer_epsg_val');
+                const savedProj4 = localStorage.getItem('wkt_viewer_proj4_val');
+
+                if (savedEpsg) {
+                    epsgInput.value = savedEpsg;
+                    currentEpsg = savedEpsg;
+                }
+
+                if (savedProj4 && savedProj4 !== '[object Object]') {
+                    proj4.defs(`EPSG:${currentEpsg}`, savedProj4);
+                    PROJ4_DEFS_CACHE[currentEpsg] = savedProj4;
+                    proj4Input.value = savedProj4;
+                } else {
+                    loadEpsgDefinition(currentEpsg);
+                }
+
+                if (savedEditor) {
+                    editor.value = savedEditor;
+                    syncTextareaToMap();
+                } else {
+                    loadExample();
+                }
+            } catch (e) {
+                console.error("Restore state failure:", e);
+                loadExample();
+            }
+        }
+
+        // Load Example Geometry
+        function loadExample() {
+            // A beautiful polygon coordinate geometry of Central Park, NY reprojected
+            const exampleWKT = "POLYGON((-73.973057 40.764356, -73.981898 40.768094, -73.958209 40.800621, -73.949282 40.796853, -73.973057 40.764356))";
+            
+            epsgInput.value = "4326";
+            proj4Input.value = COMMON_PROJECTIONS['4326'];
+            currentEpsg = "4326";
+            editor.value = exampleWKT;
+            
+            syncTextareaToMap();
+            showStatus('success', 'Example Loaded', 'Central Park, NY bounding polygon mapped (WGS84 EPSG:4326).');
+        }
+
+        // Event Listeners Wire-up
+        function setupEventListeners() {
+            // Textarea input sync (debounced to avoid re-parsing on every keystroke)
+            let _editorDebounce = null;
+            editor.addEventListener('input', () => {
+                if (_editorDebounce) clearTimeout(_editorDebounce);
+                _editorDebounce = setTimeout(syncTextareaToMap, 300);
+            });
+
+            // Theme toggle button
+            const btnTheme = document.getElementById('btn-theme-toggle');
+            if (btnTheme) {
+                btnTheme.addEventListener('click', toggleTheme);
+                btnTheme.textContent = document.documentElement.classList.contains('light-theme') ? '🌙' : '☀️';
+            }
+
+            // Manual Fetch CRS button click
+            btnFetchEpsg.addEventListener('click', () => {
+                loadEpsgDefinition(epsgInput.value);
+            });
+
+            // Handle press enter inside EPSG code input
+            epsgInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    loadEpsgDefinition(epsgInput.value);
+                }
+            });
+
+            // Proj4 text area manual input (debounced to avoid re-rendering on every keystroke)
+            let _proj4Debounce = null;
+            proj4Input.addEventListener('input', () => {
+                if (_proj4Debounce) clearTimeout(_proj4Debounce);
+                _proj4Debounce = setTimeout(() => {
+                    const def = proj4Input.value.trim();
+                    const code = epsgInput.value.trim();
+                    if (def && code) {
+                        proj4.defs(`EPSG:${code}`, def);
+                        PROJ4_DEFS_CACHE[code] = def;
+                        syncTextareaToMap();
+                        showStatus('success', 'Custom CRS Registered', `EPSG:${code} registered with custom Proj4 parameter.`);
+                    }
+                }, 500);
+            });
+
+            // Clear button
+            document.getElementById('btn-clear').addEventListener('click', () => {
+                editor.value = '';
+                drawnItems.clearLayers();
+                formatBadge.textContent = "Auto Detect";
+                showStatus('info', 'Editor Cleared', 'Ready. Paste new spatial representation data.');
+                saveCurrentState();
+            });
+
+            // Load Example button
+            document.getElementById('btn-example').addEventListener('click', loadExample);
+
+            // Toggle format helper drawer accordion
+            helperHeader.addEventListener('click', () => {
+                const isShow = helperBody.classList.toggle('show');
+                helperChevron.textContent = isShow ? "▲" : "▼";
+            });
+
+            // Copy As Dropdown toggle
+            btnCopyDropdown.addEventListener('click', (e) => {
+                e.stopPropagation();
+                copyMenu.classList.toggle('show');
+            });
+
+            // Copy Dropdown Format selectors
+            copyMenu.addEventListener('click', (e) => {
+                const targetBtn = e.target.closest('.dropdown-item');
+                if (!targetBtn) return;
+
+                const format = targetBtn.getAttribute('data-format');
+                handleCopyFormat(format);
+            });
+
+            // ---- New Feature Listeners ----
+
+            // Import button
+            const fileInput = document.getElementById('file-input');
+            document.getElementById('btn-import').addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    editor.value = ev.target.result;
+                    syncTextareaToMap();
+                    showToast(`Imported: ${file.name}`);
+                };
+                reader.onerror = function() {
+                    showToast('Failed to read file.');
+                };
+                reader.readAsText(file);
+                fileInput.value = ''; // reset so same file can be re-imported
+            });
+
+            // Close all dropdowns when clicking outside
+            document.addEventListener('click', () => {
+                copyMenu.classList.remove('show');
+            });
+
+            // Global keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                // Don't fire when user is typing in a form field or contenteditable
+                const el = document.activeElement;
+                if (!el) return;
+                const tag = el.tagName;
+                if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable) return;
+
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    // Remove Geoman layers that are currently selected for editing.
+                    // NOTE: _pmTempSelection is a Geoman-internal property — wrap defensively
+                    // and fall back to Geoman's native Delete handling on future library versions.
+                    try {
+                        const selected = drawnItems.getLayers().filter(l => l.pm && l._pmTempSelection);
+                        if (selected.length > 0) {
+                            selected.forEach(l => drawnItems.removeLayer(l));
+                            syncMapToTextarea();
+                            showToast(`Removed ${selected.length} feature(s).`);
+                        }
+                    } catch (_) {
+                        // Geoman API changed — its native Delete handler will still work.
+                    }
+                } else if (e.key === 'Escape') {
+                    // Cancel current drawing mode
+                    if (map.pm && map.pm.Draw) {
+                        const wasDrawing = map.pm.Draw.getShapes && map.pm.Draw.getShapes().length > 0;
+                        if (wasDrawing && typeof map.pm.Draw.remove === 'function') {
+                            map.pm.Draw.remove();
+                            showToast('Drawing cancelled.');
+                        }
+                    }
+                }
+            });
+        }
+
+        // Export formats copier selector
+        function handleCopyFormat(format) {
+            const textVal = editor.value.trim();
+            if (!textVal) {
+                showToast("Editor is empty. Nothing to copy.");
+                return;
+            }
+
+            try {
+                const activeProj = `EPSG:${currentEpsg}`;
+                // Build directly from map layers (single projection) instead of round-tripping
+                // through parseInput (text→EPSG:4326) then reprojectGeoJSON (EPSG:4326→activeProj)
+                const localGeom = buildGeoJSONFromLayers(activeProj);
+                if (!localGeom) {
+                    showToast("No geometry on the map to copy.");
+                    return;
+                }
+
+                let copyText = '';
+                
+                if (format === 'wkt') {
+                    copyText = wellknown.stringify(localGeom);
+                } 
+                else if (format === 'wkb' || format === 'ewkb') {
+                    const wkxGeom = wkx.Geometry.parseGeoJSON(localGeom);
+                    if (format === 'ewkb') {
+                        // Inject SRID for EWKB
+                        wkxGeom.srid = parseInt(currentEpsg);
+                        copyText = wkxGeom.toEwkb().toString('hex');
+                    } else {
+                        copyText = wkxGeom.toWkb().toString('hex');
+                    }
+                } 
+                else if (format === 'geojson') {
+                    copyText = JSON.stringify(localGeom, null, 2);
+                } 
+                else if (format === 'bbox') {
+                    // Use drawnItems bounds directly (already in EPSG:4326), reproject to activeProj
+                    const bounds = drawnItems.getBounds();
+                    if (bounds.isValid()) {
+                        const sw = proj4('EPSG:4326', activeProj, [bounds.getWest(), bounds.getSouth()]);
+                        const ne = proj4('EPSG:4326', activeProj, [bounds.getEast(), bounds.getNorth()]);
+                        // format: minX, minY, maxX, maxY
+                        copyText = `${sw[0].toFixed(6)}, ${sw[1].toFixed(6)}, ${ne[0].toFixed(6)}, ${ne[1].toFixed(6)}`;
+                    } else {
+                        throw new Error("Unable to calculate bounding box for the features.");
+                    }
+                }
+
+                if (copyText) {
+                    copyToClipboard(copyText).then(() => {
+                        showToast(`Copied as ${format.toUpperCase()} to clipboard!`);
+                    });
+                }
+            } catch (e) {
+                showToast(`Copy Failed: ${e.message}`);
+            }
+        }
+
+        // Helper: extract human-readable geometry type from GeoJSON
+        function getGeometryType(geojson) {
+            if (!geojson) return 'Unknown';
+            if (geojson.type === 'FeatureCollection') {
+                const types = [...new Set(geojson.features.map(f => f.geometry && f.geometry.type).filter(Boolean))];
+                return types.length ? types.join(', ') : 'FeatureCollection';
+            }
+            if (geojson.type === 'Feature') {
+                return geojson.geometry ? geojson.geometry.type : 'Feature';
+            }
+            if (geojson.type === 'GeometryCollection') {
+                const types = [...new Set(geojson.geometries.map(g => g.type).filter(Boolean))];
+                return types.length ? types.join(', ') : 'GeometryCollection';
+            }
+            return geojson.type || 'Unknown';
+        }
+
+        // App Entry Point
+        window.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            setupEventListeners();
+            restoreSavedState();
+        });
+    </script>
+    
+    <!-- Dynamic Notification Toast -->
+    <div class="toast" id="toast">
+        <span id="toast-text">Link copied to clipboard!</span>
+    </div>
+</body>
+</html>
