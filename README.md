@@ -1,7 +1,93 @@
-# GeoLens (空间几何对象可视化与投影转换工具)
+# GeoLens (空间几何对象可视化)
 
 - [简体中文](#简体中文)
 - [English](#english)
+
+---
+
+## English
+
+A lightweight, powerful, single-file HTML5-based web application for parsing, visualizing, editing, reprojecting, and exporting vector geometries. With an intuitive interface, you can easily work with spatial data directly in your browser.
+
+### 🌟 Core Features
+
+#### 1. Format Auto-Detection & Parsing
+Automatically detects and renders the following geospatial vector data formats:
+- **WKT (Well-known Text)**: Standard geometries such as `POINT`, `LINESTRING`, `POLYGON`, `MULTIPOLYGON`, and `GeometryCollection` (e.g., `POINT(-74.006 40.7128)`).
+- **EWKT (Extended WKT)**: Well-known Text containing SRID prefixes (e.g., `SRID=4326;POINT(-74.006 40.7128)`).
+- **Hex WKB (Well-known Binary)**: Hexadecimal representation of binary spatial geometry.
+- **Hex EWKB (Extended WKB)**: Hexadecimal WKB containing SRID headers.
+- **GeoJSON**: Supports parsing standard GeoJSON `Geometry`, `Feature`, and `FeatureCollection` structures.
+- **Geohash**: Geohash coordinates (e.g., `dr5reg`).
+- **Uber H3 Index**: Uber's hexagonal hierarchical spatial index (e.g., `852a1077fffffff`).
+
+#### 2. Interactive Map & Drawing Tools
+- **Basemap Switcher**: Toggle between five beautiful basemaps, including CartoDB Dark Matter, CartoDB Positron, standard OpenStreetMap, OpenTopoMap, and Esri World Imagery.
+- **Leaflet Geoman Controls**: Draw points, circle markers, polylines, rectangles, polygons, and circles directly on the map.
+- **Edit & Drag**: Interactively edit vertices, drag layers, or remove geometries from the map.
+- **Live Cursor Tracking**: Real-time display of cursor coordinates projected in the active Coordinate Reference System (meters, degrees, etc.).
+
+#### 3. Coordinate Projections & CRS Support
+- **Built-in Projections**: Pre-configured common systems: EPSG:4326 (WGS 84), EPSG:3857 (Web Mercator), EPSG:4269, EPSG:27700 (OSGB36), EPSG:3035, and common UTM zones (32631 - 32633).
+- **Dynamic CRS Resolution**: Input any 4-5 digit EPSG code to dynamically fetch Proj4 definitions from `epsg.io` and register them instantly.
+- **Custom Proj4 Editing**: Edit Proj4 parameters manually to support custom, local, or non-standard reference systems.
+
+#### 4. Export & Copy Geometries
+- Export all drawn geometries via the Copy dropdown into:
+  - **WKT**: Standard Well-known Text.
+  - **WKB**: Hexadecimal Well-known Binary.
+  - **EWKB**: Hexadecimal EWKB with current SRID.
+  - **GeoJSON**: Standard GeoJSON representation.
+  - **Bounding Box (BBOX)**: Bounding box limits (`minX, minY, maxX, maxY`) projected in the active CRS.
+
+#### 5. File Import
+- Import files containing `.wkt`, `.geojson`, `.json`, `.wkb`, or `.txt` directly into the editor for instant visualization.
+
+#### 6. Aesthetics & Theme Sync
+- **System Theme Auto-Detection**: Synchronizes with OS light/dark mode preference on initial load, with a manual toggle button.
+- **Modern Glassmorphism UI**: Beautifully styled sidebar using `Outfit` & `JetBrains Mono` fonts, featuring backdrop blurs and subtle micro-animations.
+- **State Persistence**: Auto-saves editor content, EPSG code, and Proj4 parameters to `localStorage` to preserve progress across refreshes.
+
+### ⌨️ Global Keyboard Shortcuts
+
+When not typing in inputs/textareas:
+- **`Delete` / `Backspace`**: Quickly remove selected layers from the map.
+- **`Escape`**: Cancel the current drawing mode.
+
+### 🛠 Getting Started
+
+The project is built on a **single HTML file architecture**. All styling, scripts, and dependencies are packed inside [index.html](file:///c:/projects/wkb/index.html). No build, compile, or install steps are required.
+
+#### Method 1: Open Directly
+Double-click and open the file in any browser:
+`c:\projects\wkb\index.html`
+
+#### Method 2: Serve Locally (Recommended)
+To prevent potential CORS issues with browser file restrictions, serve the folder using any HTTP server:
+
+**Using Python:**
+```bash
+cd c:\projects\wkb
+python -m http.server 8000
+```
+Then navigate to `http://localhost:8000/`.
+
+**Using Node.js:**
+```bash
+npx serve
+```
+
+### 📦 Dependencies
+
+All external libraries are loaded asynchronously via CDN. No local installations required:
+- [Leaflet (v1.9.4)](https://leafletjs.com/) - Map rendering engine.
+- [Leaflet Geoman (v2.17.0)](https://geoman.io/) - Map drawing & editing.
+- [Proj4js (v2.11.0)](https://github.com/proj4js/proj4js) - Coordinate transformations.
+- [wellknown (v0.5.0)](https://github.com/mapbox/wellknown) - WKT parsing.
+- [wkx (v0.5.0)](https://github.com/cschwarz/wkx) - WKB/EWKB binary parsing.
+- [buffer (v6.0.3)](https://github.com/feross/buffer) - Buffer polyfill.
+- [h3-js (v4.1.0)](https://github.com/uber/h3-js) - Uber H3 index boundaries.
+
 
 ---
 
@@ -90,87 +176,4 @@ npx serve
 - [buffer (v6.0.3)](https://github.com/feross/buffer) - 浏览器端的二进制处理 Polyfill。
 - [h3-js (v4.1.0)](https://github.com/uber/h3-js) - 优步 H3 六边形网格层解析库。
 
----
 
-## English
-
-A lightweight, powerful, single-file HTML5-based web application for parsing, visualizing, editing, reprojecting, and exporting vector geometries. With an intuitive interface, you can easily work with spatial data directly in your browser.
-
-### 🌟 Core Features
-
-#### 1. Format Auto-Detection & Parsing
-Automatically detects and renders the following geospatial vector data formats:
-- **WKT (Well-known Text)**: Standard geometries such as `POINT`, `LINESTRING`, `POLYGON`, `MULTIPOLYGON`, and `GeometryCollection` (e.g., `POINT(-74.006 40.7128)`).
-- **EWKT (Extended WKT)**: Well-known Text containing SRID prefixes (e.g., `SRID=4326;POINT(-74.006 40.7128)`).
-- **Hex WKB (Well-known Binary)**: Hexadecimal representation of binary spatial geometry.
-- **Hex EWKB (Extended WKB)**: Hexadecimal WKB containing SRID headers.
-- **GeoJSON**: Supports parsing standard GeoJSON `Geometry`, `Feature`, and `FeatureCollection` structures.
-- **Geohash**: Geohash coordinates (e.g., `dr5reg`).
-- **Uber H3 Index**: Uber's hexagonal hierarchical spatial index (e.g., `852a1077fffffff`).
-
-#### 2. Interactive Map & Drawing Tools
-- **Basemap Switcher**: Toggle between five beautiful basemaps, including CartoDB Dark Matter, CartoDB Positron, standard OpenStreetMap, OpenTopoMap, and Esri World Imagery.
-- **Leaflet Geoman Controls**: Draw points, circle markers, polylines, rectangles, polygons, and circles directly on the map.
-- **Edit & Drag**: Interactively edit vertices, drag layers, or remove geometries from the map.
-- **Live Cursor Tracking**: Real-time display of cursor coordinates projected in the active Coordinate Reference System (meters, degrees, etc.).
-
-#### 3. Coordinate Projections & CRS Support
-- **Built-in Projections**: Pre-configured common systems: EPSG:4326 (WGS 84), EPSG:3857 (Web Mercator), EPSG:4269, EPSG:27700 (OSGB36), EPSG:3035, and common UTM zones (32631 - 32633).
-- **Dynamic CRS Resolution**: Input any 4-5 digit EPSG code to dynamically fetch Proj4 definitions from `epsg.io` and register them instantly.
-- **Custom Proj4 Editing**: Edit Proj4 parameters manually to support custom, local, or non-standard reference systems.
-
-#### 4. Export & Copy Geometries
-- Export all drawn geometries via the Copy dropdown into:
-  - **WKT**: Standard Well-known Text.
-  - **WKB**: Hexadecimal Well-known Binary.
-  - **EWKB**: Hexadecimal EWKB with current SRID.
-  - **GeoJSON**: Standard GeoJSON representation.
-  - **Bounding Box (BBOX)**: Bounding box limits (`minX, minY, maxX, maxY`) projected in the active CRS.
-
-#### 5. File Import
-- Import files containing `.wkt`, `.geojson`, `.json`, `.wkb`, or `.txt` directly into the editor for instant visualization.
-
-#### 6. Aesthetics & Theme Sync
-- **System Theme Auto-Detection**: Synchronizes with OS light/dark mode preference on initial load, with a manual toggle button.
-- **Modern Glassmorphism UI**: Beautifully styled sidebar using `Outfit` & `JetBrains Mono` fonts, featuring backdrop blurs and subtle micro-animations.
-- **State Persistence**: Auto-saves editor content, EPSG code, and Proj4 parameters to `localStorage` to preserve progress across refreshes.
-
-### ⌨️ Global Keyboard Shortcuts
-
-When not typing in inputs/textareas:
-- **`Delete` / `Backspace`**: Quickly remove selected layers from the map.
-- **`Escape`**: Cancel the current drawing mode.
-
-### 🛠 Getting Started
-
-The project is built on a **single HTML file architecture**. All styling, scripts, and dependencies are packed inside [index.html](file:///c:/projects/wkb/index.html). No build, compile, or install steps are required.
-
-#### Method 1: Open Directly
-Double-click and open the file in any browser:
-`c:\projects\wkb\index.html`
-
-#### Method 2: Serve Locally (Recommended)
-To prevent potential CORS issues with browser file restrictions, serve the folder using any HTTP server:
-
-**Using Python:**
-```bash
-cd c:\projects\wkb
-python -m http.server 8000
-```
-Then navigate to `http://localhost:8000/`.
-
-**Using Node.js:**
-```bash
-npx serve
-```
-
-### 📦 Dependencies
-
-All external libraries are loaded asynchronously via CDN. No local installations required:
-- [Leaflet (v1.9.4)](https://leafletjs.com/) - Map rendering engine.
-- [Leaflet Geoman (v2.17.0)](https://geoman.io/) - Map drawing & editing.
-- [Proj4js (v2.11.0)](https://github.com/proj4js/proj4js) - Coordinate transformations.
-- [wellknown (v0.5.0)](https://github.com/mapbox/wellknown) - WKT parsing.
-- [wkx (v0.5.0)](https://github.com/cschwarz/wkx) - WKB/EWKB binary parsing.
-- [buffer (v6.0.3)](https://github.com/feross/buffer) - Buffer polyfill.
-- [h3-js (v4.1.0)](https://github.com/uber/h3-js) - Uber H3 index boundaries.
