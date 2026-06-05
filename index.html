@@ -493,64 +493,6 @@
             word-break: break-all;
         }
 
-        /* Format Helper drawer */
-        .format-helper {
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            background-color: var(--input-bg);
-            overflow: hidden;
-        }
-
-        .helper-header {
-            padding: 0.75rem 1rem;
-            font-size: 0.8rem;
-            font-weight: 600;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            cursor: pointer;
-            user-select: none;
-            background-color: var(--banner-bg-default);
-        }
-
-        .helper-body {
-            padding: 0.75rem 1rem;
-            border-top: 1px solid var(--border-color);
-            display: none;
-            flex-direction: column;
-            gap: 0.75rem;
-            max-height: 250px;
-            overflow-y: auto;
-        }
-
-        .helper-body.show {
-            display: flex;
-        }
-
-        .example-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.2rem;
-        }
-
-        .example-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-
-        .example-code {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.7rem;
-            background-color: var(--bg-tertiary);
-            padding: 0.3rem 0.5rem;
-            border-radius: 4px;
-            border: 1px solid var(--border-color);
-            white-space: nowrap;
-            overflow-x: auto;
-            color: var(--text-primary);
-        }
-
 
         /* Floating Toast Style */
         .toast {
@@ -625,6 +567,53 @@
             }
         }
 
+        /* Advanced Options Collapsible Container */
+        .advanced-options {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--input-bg);
+            overflow: hidden;
+            transition: border-color 0.2s ease;
+        }
+
+        .advanced-options:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+        }
+
+        .advanced-options-header {
+            padding: 0.75rem 1rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            background-color: var(--banner-bg-default);
+            color: var(--text-secondary);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .advanced-options-header:hover {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .advanced-options-body {
+            max-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 0 1rem;
+        }
+
+        .advanced-options-body.show {
+            padding: 1rem;
+            max-height: 400px;
+        }
+
         /* Responsive Layout */
         @media (max-width: 768px) {
             body {
@@ -686,24 +675,6 @@
                     </div>
                 </div>
 
-                <!-- CRS & Projection Configuration -->
-                <div class="form-group">
-                    <label for="epsg">Coordinate Reference System</label>
-                    <div class="input-row">
-                        <div class="input-field-wrapper">
-                            <span class="input-label-small">EPSG Code</span>
-                            <input type="text" id="epsg" value="4326" placeholder="e.g. 4326, 3857, 27700">
-                        </div>
-                        <button class="btn-fetch" id="btn-fetch-epsg" title="Lookup & Register Projection">Load CRS</button>
-                    </div>
-                </div>
-
-                <!-- Proj4 definition display -->
-                <div class="form-group" id="proj4-def-container">
-                    <label for="proj4-def">Proj4 Definition (Editable)</label>
-                    <textarea id="proj4-def" placeholder="+proj=longlat +datum=WGS84 +no_defs"></textarea>
-                </div>
-
                 <!-- Action Button Grid -->
                 <div class="action-grid" id="action-grid">
                     <button class="btn btn-warning" id="btn-clear">🗑 Clear</button>
@@ -731,43 +702,33 @@
                     <div class="status-message" id="status-message">Ready. Paste spatial data to begin.</div>
                 </div>
 
-                <!-- Expandable Cheat Sheet -->
-                <div class="format-helper">
-                    <div class="helper-header" id="helper-header">
-                        <span>💡 Supported Formats Reference</span>
-                        <span id="helper-chevron">▼</span>
+                <!-- Advanced Options -->
+                <div class="advanced-options">
+                    <div class="advanced-options-header" id="adv-options-header">
+                        <span>⚙️ Advanced Options</span>
+                        <span id="adv-options-chevron">▼</span>
                     </div>
-                    <div class="helper-body" id="helper-body">
-                        <div class="example-item">
-                            <span class="example-title">WKT (Point)</span>
-                            <span class="example-code">POINT(-74.006 40.7128)</span>
+                    <div class="advanced-options-body" id="adv-options-body">
+                        <!-- CRS & Projection Configuration -->
+                        <div class="form-group">
+                            <label for="epsg">Coordinate Reference System</label>
+                            <div class="input-row">
+                                <div class="input-field-wrapper">
+                                    <span class="input-label-small">EPSG Code</span>
+                                    <input type="text" id="epsg" value="4326" placeholder="e.g. 4326, 3857, 27700">
+                                </div>
+                                <button class="btn-fetch" id="btn-fetch-epsg" title="Lookup & Register Projection">Load CRS</button>
+                            </div>
                         </div>
-                        <div class="example-item">
-                            <span class="example-title">WKT (Polygon in EPSG:27700)</span>
-                            <span class="example-code">POLYGON((453000 310000, 453100 310000, 453100 310100, 453000 310100, 453000 310000))</span>
-                        </div>
-                        <div class="example-item">
-                            <span class="example-title">WKB Hex (WGS84 Point)</span>
-                            <span class="example-code">0101000000000000000000f03f0000000000000040</span>
-                        </div>
-                        <div class="example-item">
-                            <span class="example-title">EWKB Hex (Point with SRID 4326)</span>
-                            <span class="example-code">0101000020E6100000000000000000f03f0000000000000040</span>
-                        </div>
-                        <div class="example-item">
-                            <span class="example-title">Geohash</span>
-                            <span class="example-code">dr5reg</span>
-                        </div>
-                        <div class="example-item">
-                            <span class="example-title">Uber H3 Hex</span>
-                            <span class="example-code">852a1077fffffff</span>
-                        </div>
-                        <div class="example-item">
-                            <span class="example-title">GeoJSON Geometry</span>
-                            <span class="example-code">{"type":"Point","coordinates":[-74,40.7]}</span>
+
+                        <!-- Proj4 definition display -->
+                        <div class="form-group" id="proj4-def-container">
+                            <label for="proj4-def">Proj4 Definition (Editable)</label>
+                            <textarea id="proj4-def" placeholder="+proj=longlat +datum=WGS84 +no_defs"></textarea>
                         </div>
                     </div>
                 </div>
+
             </div>
 
 
@@ -932,11 +893,13 @@
         const statusTitle = document.getElementById('status-title');
         const statusMessage = document.getElementById('status-message');
         const formatBadge = document.getElementById('format-badge');
-        const helperHeader = document.getElementById('helper-header');
-        const helperBody = document.getElementById('helper-body');
-        const helperChevron = document.getElementById('helper-chevron');
+
         const toast = document.getElementById('toast');
         const toastText = document.getElementById('toast-text');
+        
+        const advOptionsHeader = document.getElementById('adv-options-header');
+        const advOptionsBody = document.getElementById('adv-options-body');
+        const advOptionsChevron = document.getElementById('adv-options-chevron');
         
         // Copy Dropdown elements
         const btnCopyDropdown = document.getElementById('btn-copy-dropdown');
@@ -1630,11 +1593,13 @@
             // Load Example button
             document.getElementById('btn-example').addEventListener('click', loadExample);
 
-            // Toggle format helper drawer accordion
-            helperHeader.addEventListener('click', () => {
-                const isShow = helperBody.classList.toggle('show');
-                helperChevron.textContent = isShow ? "▲" : "▼";
+            // Toggle advanced options drawer accordion
+            advOptionsHeader.addEventListener('click', () => {
+                const isShow = advOptionsBody.classList.toggle('show');
+                advOptionsChevron.textContent = isShow ? "▲" : "▼";
             });
+
+
 
             // Copy As Dropdown toggle
             btnCopyDropdown.addEventListener('click', (e) => {
