@@ -671,7 +671,7 @@
                         <span class="format-badge" id="format-badge">Auto Detect</span>
                     </label>
                     <div class="editor-wrapper">
-                        <textarea id="editor" placeholder="Paste WKT, Hex WKB, EWKB, GeoJSON, Geohash, or H3 index here..."></textarea>
+                        <textarea id="editor" placeholder="Paste WKT, Hex WKB, EWKB, Base64 WKB, GeoJSON, Geohash, or H3 index here..."></textarea>
                     </div>
                 </div>
 
@@ -687,6 +687,8 @@
                             <button class="dropdown-item" data-format="wkt">WKT (Well-known Text)</button>
                             <button class="dropdown-item" data-format="wkb">WKB (Hex Binary)</button>
                             <button class="dropdown-item" data-format="ewkb">EWKB (Hex with SRID)</button>
+                            <button class="dropdown-item" data-format="base64_wkb">WKB (Base64 Binary)</button>
+                            <button class="dropdown-item" data-format="base64_ewkb">EWKB (Base64 with SRID)</button>
                             <button class="dropdown-item" data-format="geojson">GeoJSON</button>
                             <button class="dropdown-item" data-format="bbox">Bounding Box (BBOX)</button>
                         </div>
@@ -758,16 +760,21 @@
     <!-- Mapbox Wellknown (WKT <-> GeoJSON) -->
     <script src="https://cdn.jsdelivr.net/npm/wellknown@0.5.0/wellknown.js"></script>
     
-    <!-- Buffer Polyfill for browser binary parsing -->
-    <script src="https://cdn.jsdelivr.net/npm/buffer@6.0.3/index.min.js"></script>
+    <!-- wkx (WKB <-> GeoJSON) — includes Browserify-bundled Buffer -->
+    <script src="https://cdn.jsdelivr.net/npm/wkx@0.5.0/dist/wkx.min.js"></script>
+
     <script>
-        if (typeof window.buffer !== 'undefined') {
-            window.Buffer = window.buffer.Buffer;
+        // wkx uses Browserify which overrides global `require` and bundles its own
+        // Buffer implementation. We capture both wkx and Buffer from this system.
+        if (typeof window.wkx === 'undefined' && typeof require === 'function') {
+            try { window.wkx = require('wkx'); } catch (e) {}
+        }
+        // Get a working Buffer from wkx's Browserify require — this is the same
+        // Buffer class that wkx uses internally, so isBuffer() checks will pass.
+        if (typeof require === 'function') {
+            try { window.Buffer = require('buffer').Buffer; } catch (e) {}
         }
     </script>
-    
-    <!-- wkx (WKB <-> GeoJSON) -->
-    <script src="https://cdn.jsdelivr.net/npm/wkx@0.5.0/dist/wkx.min.js"></script>
     
     <!-- Uber H3 Geospatial Hexagon library -->
     <script src="https://cdn.jsdelivr.net/npm/h3-js@4.1.0/dist/h3-js.umd.js"></script>
@@ -1211,7 +1218,9 @@
             if (/^[0-9a-fA-F]+$/.test(inputStr)) {
                 formatBadge.textContent = "Hex WKB";
                 try {
-                    const buffer = Buffer.from(inputStr, 'hex');
+                    const buffer = (typeof Buffer.from === 'function')
+                        ? Buffer.from(inputStr, 'hex')
+                        : new Buffer(inputStr, 'hex');
                     const geom = wkx.Geometry.parse(buffer);
                     const geojson = geom.toGeoJSON();
                     
@@ -1229,8 +1238,45 @@
                     throw new Error("WKB/EWKB binary parsing failure: " + e.message);
                 }
             }
+
+            // 5. Detect Base64 WKB or EWKB
+            // Strategy: decode base64 → raw bytes → hex string, then create a Buffer
+            // from wkx's Browserify-bundled Buffer class so isBuffer() checks pass.
+            const cleanStr = inputStr.replace(/\s+/g, '');
+            if (/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(cleanStr) && cleanStr.length >= 12) {
+                try {
+                    // Decode base64 to raw bytes using the native atob()
+                    const binString = atob(cleanStr);
+                    // Convert raw bytes to hex string
+                    let hexStr = '';
+                    for (let i = 0; i < binString.length; i++) {
+                        hexStr += binString.charCodeAt(i).toString(16).padStart(2, '0');
+                    }
+                    // Create Buffer using the API available (Buffer.from for modern, constructor for old)
+                    const buffer = (typeof Buffer.from === 'function')
+                        ? Buffer.from(hexStr, 'hex')
+                        : new Buffer(hexStr, 'hex');
+                    const geom = wkx.Geometry.parse(buffer);
+                    const geojson = geom.toGeoJSON();
+                    
+                    formatBadge.textContent = "Base64 WKB";
+                    let geomProj = activeProj;
+                    if (geom.srid) {
+                        formatBadge.textContent = `Base64 EWKB (SRID:${geom.srid})`;
+                        geomProj = `EPSG:${geom.srid}`;
+                        if (geom.srid.toString() !== currentEpsg) {
+                            epsgInput.value = geom.srid;
+                            loadEpsgDefinition(geom.srid.toString());
+                        }
+                    }
+                    return reprojectGeoJSON(geojson, geomProj, 'EPSG:4326');
+                } catch (e) {
+                    console.warn('Base64 WKB parse attempt failed:', e.message);
+                    // Not a valid Base64 WKB, let it fall through to WKT parsing
+                }
+            }
             
-            // 5. Default: Parse WKT representation
+            // 6. Default: Parse WKT representation
             formatBadge.textContent = "WKT (Well-known Text)";
             try {
                 // Remove potential SRID prefix in EWKT (e.g., SRID=4326;POINT(1 2))
@@ -1703,14 +1749,16 @@
                 if (format === 'wkt') {
                     copyText = wellknown.stringify(localGeom);
                 } 
-                else if (format === 'wkb' || format === 'ewkb') {
+                else if (format === 'wkb' || format === 'ewkb' || format === 'base64_wkb' || format === 'base64_ewkb') {
                     const wkxGeom = wkx.Geometry.parseGeoJSON(localGeom);
-                    if (format === 'ewkb') {
+                    if (format === 'ewkb' || format === 'base64_ewkb') {
                         // Inject SRID for EWKB
                         wkxGeom.srid = parseInt(currentEpsg);
-                        copyText = wkxGeom.toEwkb().toString('hex');
+                        const ewkbBuf = wkxGeom.toEwkb();
+                        copyText = (format === 'base64_ewkb') ? ewkbBuf.toString('base64') : ewkbBuf.toString('hex');
                     } else {
-                        copyText = wkxGeom.toWkb().toString('hex');
+                        const wkbBuf = wkxGeom.toWkb();
+                        copyText = (format === 'base64_wkb') ? wkbBuf.toString('base64') : wkbBuf.toString('hex');
                     }
                 } 
                 else if (format === 'geojson') {
