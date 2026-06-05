@@ -1,22 +1,27 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GeoLens - Spatial Visualizer & Reprojector</title>
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='7' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23ffffff' stroke-width='1' stroke-dasharray='2 1.5' opacity='0.4'/%3E%3Cpath d='M16 2C10 2 8 8 8 16s2 14 8 14 8-6 8-14S22 2 16 2z' fill='none' stroke='%23ffffff' stroke-width='1.2' opacity='0.4'/%3E%3Cline x1='2' y1='16' x2='30' y2='16' stroke='%23ffffff' stroke-width='1.2' opacity='0.4'/%3E%3Ccircle cx='16' cy='16' r='5.5' fill='%230f172a' stroke='%23ffffff' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%236366f1'/%3E%3C/svg%3E">
-    
+    <link rel="icon" type="image/svg+xml"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%236366f1'/%3E%3Cstop offset='100%25' stop-color='%23a855f7'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='7' fill='url(%23g)'/%3E%3Ccircle cx='16' cy='16' r='11' fill='none' stroke='%23ffffff' stroke-width='1' stroke-dasharray='2 1.5' opacity='0.4'/%3E%3Cpath d='M16 2C10 2 8 8 8 16s2 14 8 14 8-6 8-14S22 2 16 2z' fill='none' stroke='%23ffffff' stroke-width='1.2' opacity='0.4'/%3E%3Cline x1='2' y1='16' x2='30' y2='16' stroke='%23ffffff' stroke-width='1.2' opacity='0.4'/%3E%3Ccircle cx='16' cy='16' r='5.5' fill='%230f172a' stroke='%23ffffff' stroke-width='1.5'/%3E%3Ccircle cx='16' cy='16' r='2.5' fill='%236366f1'/%3E%3C/svg%3E">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
+    <link
+        href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
-    
+
     <!-- Leaflet Geoman Drawing CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css" />
-    
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.css" />
+
     <style>
         :root {
             --bg-primary: #0f172a;
@@ -35,7 +40,7 @@
             --warning-color: #f59e0b;
             --warning-hover: #d97706;
             --danger-color: #ef4444;
-            
+
             --map-controls-bg: rgba(30, 41, 59, 0.8);
             --map-attribution-bg: rgba(15, 23, 42, 0.8);
             --sidebar-shadow: rgba(0, 0, 0, 0.25);
@@ -551,21 +556,28 @@
         }
 
         /* Dark Leaflet Controls */
-        .leaflet-bar a, .leaflet-control-layers, .leaflet-bar, .leaflet-control-zoom {
+        .leaflet-bar a,
+        .leaflet-control-layers,
+        .leaflet-bar,
+        .leaflet-control-zoom {
             background-color: var(--bg-secondary) !important;
             border-color: var(--border-color) !important;
             color: var(--text-primary) !important;
         }
+
         .leaflet-bar a:hover {
             background-color: var(--bg-tertiary) !important;
             color: var(--text-primary) !important;
         }
+
         .leaflet-control-layers-expanded {
             background: var(--bg-secondary) !important;
             color: var(--text-primary) !important;
             border: 1px solid var(--border-color) !important;
         }
-        .leaflet-control-layers-base label, .leaflet-control-layers-overlays label {
+
+        .leaflet-control-layers-base label,
+        .leaflet-control-layers-overlays label {
             color: var(--text-primary) !important;
         }
 
@@ -575,10 +587,12 @@
             border-color: var(--text-secondary) !important;
             color: var(--text-primary) !important;
         }
+
         .leaflet-control-attribution {
             background: var(--map-attribution-bg) !important;
             color: var(--text-secondary) !important;
         }
+
         .leaflet-control-attribution a {
             color: var(--accent-color) !important;
         }
@@ -589,6 +603,7 @@
                 opacity: 0;
                 transform: translateY(10px);
             }
+
             to {
                 opacity: 1;
                 transform: translateY(0);
@@ -647,9 +662,11 @@
             body {
                 overflow: auto;
             }
+
             .container {
                 flex-direction: column;
             }
+
             #sidebar {
                 width: 100%;
                 height: auto;
@@ -657,14 +674,24 @@
                 border-right: none;
                 border-bottom: 1px solid var(--border-color);
             }
+
             #map-container {
                 width: 100%;
                 height: 50vh;
-                order: -1; /* Map on top for mobile */
+                order: -1;
+                /* Map on top for mobile */
             }
         }
     </style>
+    <script type="text/javascript">
+        (function (c, l, a, r, i, t, y) {
+            c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
+            t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
+            y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+        })(window, document, "clarity", "script", "jxmn1qjx88");
+    </script>
 </head>
+
 <body>
     <div class="container">
         <!-- Sidebar Controls Panel -->
@@ -673,23 +700,28 @@
                 <div class="sidebar-header-row">
                     <div class="logo-title">
                         <span class="logo-icon">
-                            <svg class="logo-svg" viewBox="0 0 24 24" width="28" height="28" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <svg class="logo-svg" viewBox="0 0 24 24" width="28" height="28" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
                                 <!-- Outer ring of aperture / lens -->
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5" stroke-dasharray="3 2" opacity="0.6"/>
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"
+                                    stroke-dasharray="3 2" opacity="0.6" />
                                 <!-- Globe grid lines -->
-                                <path d="M12 2C12 2 16 6 16 12C16 18 12 22 12 22C12 22 8 18 8 12C8 6 12 2 12 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-                                <path d="M2 12H22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                                <path d="M12 2C12 2 16 6 16 12C16 18 12 22 12 22C12 22 8 18 8 12C8 6 12 2 12 2Z"
+                                    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+                                <path d="M2 12H22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
                                 <!-- Camera lens aperture circle / crosshair center -->
-                                <circle cx="12" cy="12" r="4" stroke="var(--accent-color)" stroke-width="2"/>
-                                <circle cx="12" cy="12" r="1.5" fill="var(--accent-color)"/>
+                                <circle cx="12" cy="12" r="4" stroke="var(--accent-color)" stroke-width="2" />
+                                <circle cx="12" cy="12" r="1.5" fill="var(--accent-color)" />
                             </svg>
                         </span>
                         <h1>GeoLens</h1>
                     </div>
                     <div class="header-actions">
-                        <a href="https://github.com/ruanqizhen/geolens" target="_blank" rel="noopener noreferrer" class="btn-github" title="View on GitHub">
+                        <a href="https://github.com/ruanqizhen/geolens" target="_blank" rel="noopener noreferrer"
+                            class="btn-github" title="View on GitHub">
                             <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor">
-                                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+                                <path
+                                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
                             </svg>
                         </a>
                         <button id="btn-theme-toggle" class="btn-theme" title="Toggle Light/Dark Mode">☀️</button>
@@ -697,7 +729,7 @@
                 </div>
                 <div class="subtitle">Parse, reproject & share vector geometries</div>
             </div>
-            
+
             <div class="sidebar-content">
                 <!-- Data Editor Section -->
                 <div class="form-group">
@@ -706,7 +738,8 @@
                         <span class="format-badge" id="format-badge">Auto Detect</span>
                     </label>
                     <div class="editor-wrapper">
-                        <textarea id="editor" placeholder="Paste WKT, Hex WKB, EWKB, Base64 WKB, GeoJSON, Geohash, or H3 index here..."></textarea>
+                        <textarea id="editor"
+                            placeholder="Paste WKT, Hex WKB, EWKB, Base64 WKB, GeoJSON, Geohash, or H3 index here..."></textarea>
                     </div>
                 </div>
 
@@ -754,7 +787,8 @@
                                     <span class="input-label-small">EPSG Code</span>
                                     <input type="text" id="epsg" value="4326" placeholder="e.g. 4326, 3857, 27700">
                                 </div>
-                                <button class="btn-fetch" id="btn-fetch-epsg" title="Lookup & Register Projection">Load CRS</button>
+                                <button class="btn-fetch" id="btn-fetch-epsg" title="Lookup & Register Projection">Load
+                                    CRS</button>
                             </div>
                         </div>
 
@@ -785,16 +819,17 @@
     <!-- CDN Libraries Dependencies -->
     <!-- Leaflet JS -->
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
     <!-- Leaflet Geoman Drawing Tools -->
-    <script src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
-    
+    <script
+        src="https://cdn.jsdelivr.net/npm/@geoman-io/leaflet-geoman-free@2.17.0/dist/leaflet-geoman.min.js"></script>
+
     <!-- Proj4js Coordinate Projections -->
     <script src="https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.min.js"></script>
-    
+
     <!-- Mapbox Wellknown (WKT <-> GeoJSON) -->
     <script src="https://cdn.jsdelivr.net/npm/wellknown@0.5.0/wellknown.js"></script>
-    
+
     <!-- wkx (WKB <-> GeoJSON) — includes Browserify-bundled Buffer -->
     <script src="https://cdn.jsdelivr.net/npm/wkx@0.5.0/dist/wkx.min.js"></script>
 
@@ -802,15 +837,15 @@
         // wkx uses Browserify which overrides global `require` and bundles its own
         // Buffer implementation. We capture both wkx and Buffer from this system.
         if (typeof window.wkx === 'undefined' && typeof require === 'function') {
-            try { window.wkx = require('wkx'); } catch (e) {}
+            try { window.wkx = require('wkx'); } catch (e) { }
         }
         // Get a working Buffer from wkx's Browserify require — this is the same
         // Buffer class that wkx uses internally, so isBuffer() checks will pass.
         if (typeof require === 'function') {
-            try { window.Buffer = require('buffer').Buffer; } catch (e) {}
+            try { window.Buffer = require('buffer').Buffer; } catch (e) { }
         }
     </script>
-    
+
     <!-- Uber H3 Geospatial Hexagon library -->
     <script src="https://cdn.jsdelivr.net/npm/h3-js@4.1.0/dist/h3-js.umd.js"></script>
 
@@ -850,7 +885,7 @@
         // Utility: throttle high-frequency event callbacks
         function throttle(fn, delay) {
             let lastCall = 0;
-            return function(...args) {
+            return function (...args) {
                 const now = Date.now();
                 if (now - lastCall >= delay) {
                     lastCall = now;
@@ -899,7 +934,7 @@
         }
 
         // Initialize Theme early to prevent flash
-        (function() {
+        (function () {
             const savedTheme = localStorage.getItem('wkt_viewer_theme');
             if (savedTheme === 'light') {
                 document.documentElement.classList.add('light-theme');
@@ -938,11 +973,11 @@
 
         const toast = document.getElementById('toast');
         const toastText = document.getElementById('toast-text');
-        
+
         const advOptionsHeader = document.getElementById('adv-options-header');
         const advOptionsBody = document.getElementById('adv-options-body');
         const advOptionsChevron = document.getElementById('adv-options-chevron');
-        
+
         // Copy Dropdown elements
         const btnCopyDropdown = document.getElementById('btn-copy-dropdown');
         const copyMenu = document.getElementById('copy-menu');
@@ -1031,7 +1066,7 @@
             const coordY = document.getElementById('coord-y');
             const coordEpsgLabel = document.getElementById('coord-epsg-label');
 
-            map.on('mousemove', throttle(function(e) {
+            map.on('mousemove', throttle(function (e) {
                 try {
                     const targetProj = `EPSG:${currentEpsg}`;
                     if (targetProj === 'EPSG:4326') {
@@ -1053,7 +1088,7 @@
             map.on('pm:create', (e) => {
                 const layer = e.layer;
                 drawnItems.addLayer(layer);
-                
+
                 // Set path styling for the newly drawn layer
                 if (layer.setStyle) {
                     layer.setStyle({
@@ -1062,7 +1097,7 @@
                         fillOpacity: 0.2
                     });
                 }
-                
+
                 layer.on('pm:edit', syncMapToTextarea);
                 layer.on('pm:update', syncMapToTextarea);
                 syncMapToTextarea();
@@ -1112,7 +1147,7 @@
             let isEven = true;
             let latMin = -90, latMax = 90;
             let lonMin = -180, lonMax = 180;
-            
+
             for (let i = 0; i < geohash.length; i++) {
                 const c = geohash[i].toLowerCase();
                 const cd = BASE32.indexOf(c);
@@ -1148,9 +1183,9 @@
         function reprojectGeoJSON(geojson, fromProj, toProj) {
             if (!geojson) return null;
             if (fromProj === toProj) return geojson;
-            
+
             const cloned = JSON.parse(JSON.stringify(geojson));
-            
+
             const project = (coords) => {
                 try {
                     const transformed = proj4(fromProj, toProj, coords);
@@ -1160,7 +1195,7 @@
                     return coords; // fallback
                 }
             };
-            
+
             const traverseCoordinates = (geometry) => {
                 if (!geometry) return;
                 const type = geometry.type;
@@ -1176,7 +1211,7 @@
                     geometry.geometries.forEach(traverseCoordinates);
                 }
             };
-            
+
             if (cloned.type === 'FeatureCollection') {
                 cloned.features.forEach(f => traverseCoordinates(f.geometry));
             } else if (cloned.type === 'Feature') {
@@ -1191,7 +1226,7 @@
         function parseInput(inputStr, activeProj) {
             inputStr = inputStr.trim();
             if (!inputStr) return null;
-            
+
             // 1. Detect GeoJSON
             if (inputStr.startsWith('{') || inputStr.startsWith('[')) {
                 formatBadge.textContent = "GeoJSON";
@@ -1202,7 +1237,7 @@
                     throw new Error("Invalid GeoJSON JSON: " + e.message);
                 }
             }
-            
+
             // 2. Detect Uber H3 Hex Index
             if (/^[89][a-fA-F0-9]{14}$/.test(inputStr)) {
                 formatBadge.textContent = "Uber H3 Index";
@@ -1228,7 +1263,7 @@
                     throw new Error("H3 Parsing Failure: " + e.message);
                 }
             }
-            
+
             // 3. Detect Geohash (standard base32 length 3 to 12)
             if (/^[0-9b-hjkmnp-z]{3,12}$/i.test(inputStr)) {
                 formatBadge.textContent = "Geohash";
@@ -1248,7 +1283,7 @@
                     // Fall back to subsequent tests in case it was not a valid geohash
                 }
             }
-            
+
             // 4. Detect Hex WKB or EWKB
             if (/^[0-9a-fA-F]+$/.test(inputStr)) {
                 formatBadge.textContent = "Hex WKB";
@@ -1258,7 +1293,7 @@
                         : new Buffer(inputStr, 'hex');
                     const geom = wkx.Geometry.parse(buffer);
                     const geojson = geom.toGeoJSON();
-                    
+
                     let geomProj = activeProj;
                     if (geom.srid) {
                         formatBadge.textContent = `EWKB (SRID:${geom.srid})`;
@@ -1293,7 +1328,7 @@
                         : new Buffer(hexStr, 'hex');
                     const geom = wkx.Geometry.parse(buffer);
                     const geojson = geom.toGeoJSON();
-                    
+
                     formatBadge.textContent = "Base64 WKB";
                     let geomProj = activeProj;
                     if (geom.srid) {
@@ -1310,7 +1345,7 @@
                     // Not a valid Base64 WKB, let it fall through to WKT parsing
                 }
             }
-            
+
             // 6. Default: Parse WKT representation
             formatBadge.textContent = "WKT (Well-known Text)";
             try {
@@ -1327,7 +1362,7 @@
                         loadEpsgDefinition(sridMatch[1]);
                     }
                 }
-                
+
                 const geojson = wellknown.parse(wktStr);
                 if (!geojson) {
                     throw new Error("Parser returned null coordinate geometry. Verify string syntax.");
@@ -1361,7 +1396,7 @@
                         fillOpacity: 0.8
                     });
                 },
-                onEachFeature: function(feature, layer) {
+                onEachFeature: function (feature, layer) {
                     // Enable editing on new layers
                     layer.on('pm:edit', syncMapToTextarea);
                     layer.on('pm:update', syncMapToTextarea);
@@ -1450,7 +1485,7 @@
         // Parse Textarea and Render
         function syncTextareaToMap() {
             if (isUpdatingFromMap) return;
-            
+
             const textVal = editor.value.trim();
             if (!textVal) {
                 drawnItems.clearLayers();
@@ -1463,7 +1498,7 @@
             try {
                 const activeProj = `EPSG:${currentEpsg}`;
                 const parsedGeojson = parseInput(textVal, activeProj);
-                
+
                 if (parsedGeojson) {
                     renderOnMap(parsedGeojson);
 
@@ -1527,7 +1562,7 @@
             }
 
             showStatus('info', 'Resolving CRS...', `Fetching EPSG:${epsgCode} definition from epsg.io database...`);
-            
+
             // Fetch raw proj4 definitions from API
             fetch(`https://epsg.io/${epsgCode}.proj4`)
                 .then(res => {
@@ -1537,15 +1572,15 @@
                 .then(proj4Str => {
                     proj4Str = proj4Str.trim();
                     if (!proj4Str) throw new Error("Empty projection payload received.");
-                    
+
                     proj4.defs(`EPSG:${epsgCode}`, proj4Str);
                     PROJ4_DEFS_CACHE[epsgCode] = proj4Str;
                     proj4Input.value = proj4Str;
                     showStatus('success', 'CRS Registered', `Coordinate Reference System EPSG:${epsgCode} registered successfully.`);
-                    
+
                     // Reparse editor coordinates under new projection context
                     syncTextareaToMap();
-                    
+
                     if (onComplete) onComplete();
                 })
                 .catch(err => {
@@ -1608,12 +1643,12 @@
         function loadExample() {
             // A beautiful polygon coordinate geometry of Central Park, NY reprojected
             const exampleWKT = "POLYGON((-73.973057 40.764356, -73.981898 40.768094, -73.958209 40.800621, -73.949282 40.796853, -73.973057 40.764356))";
-            
+
             epsgInput.value = "4326";
             proj4Input.value = COMMON_PROJECTIONS['4326'];
             currentEpsg = "4326";
             editor.value = exampleWKT;
-            
+
             syncTextareaToMap();
             showStatus('success', 'Example Loaded', 'Central Park, NY bounding polygon mapped (WGS84 EPSG:4326).');
         }
@@ -1709,12 +1744,12 @@
                 const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = function(ev) {
+                reader.onload = function (ev) {
                     editor.value = ev.target.result;
                     syncTextareaToMap();
                     showToast(`Imported: ${file.name}`);
                 };
-                reader.onerror = function() {
+                reader.onerror = function () {
                     showToast('Failed to read file.');
                 };
                 reader.readAsText(file);
@@ -1780,10 +1815,10 @@
                 }
 
                 let copyText = '';
-                
+
                 if (format === 'wkt') {
                     copyText = wellknown.stringify(localGeom);
-                } 
+                }
                 else if (format === 'wkb' || format === 'ewkb' || format === 'base64_wkb' || format === 'base64_ewkb') {
                     const wkxGeom = wkx.Geometry.parseGeoJSON(localGeom);
                     if (format === 'ewkb' || format === 'base64_ewkb') {
@@ -1795,10 +1830,10 @@
                         const wkbBuf = wkxGeom.toWkb();
                         copyText = (format === 'base64_wkb') ? wkbBuf.toString('base64') : wkbBuf.toString('hex');
                     }
-                } 
+                }
                 else if (format === 'geojson') {
                     copyText = JSON.stringify(localGeom, null, 2);
-                } 
+                }
                 else if (format === 'bbox') {
                     // Use drawnItems bounds directly (already in EPSG:4326), reproject to activeProj
                     const bounds = drawnItems.getBounds();
@@ -1846,10 +1881,12 @@
             restoreSavedState();
         });
     </script>
-    
+
     <!-- Dynamic Notification Toast -->
     <div class="toast" id="toast">
         <span id="toast-text">Link copied to clipboard!</span>
     </div>
+    <script async src="https://hm.baidu.com/hm.js?b3f6e7ec9302021671173e3fad14f4cd"></script>
 </body>
+
 </html>
