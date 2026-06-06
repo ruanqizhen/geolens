@@ -988,17 +988,18 @@
             map = L.map('map', {
                 center: [20, 0],
                 zoom: 2,
+                maxZoom: 22,
                 zoomControl: true
             });
 
             // Base Layers definitions
             const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
+                maxZoom: 22,
                 attribution: '© OpenStreetMap contributors'
             });
 
             const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-                maxZoom: 17,
+                maxZoom: 22,
                 attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
             });
 
@@ -1009,13 +1010,13 @@
             darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
-                maxZoom: 20
+                maxZoom: 22
             });
 
             lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
                 subdomains: 'abcd',
-                maxZoom: 20
+                maxZoom: 22
             });
 
             // Add correct default layer based on active theme
@@ -1411,7 +1412,7 @@
             if (drawnItems.getLayers().length > 0) {
                 const bounds = drawnItems.getBounds();
                 if (bounds.isValid()) {
-                    map.fitBounds(bounds, { maxZoom: 16, padding: [40, 40] });
+                    map.fitBounds(bounds, { maxZoom: 20, padding: [40, 40] });
                 }
             }
         }
