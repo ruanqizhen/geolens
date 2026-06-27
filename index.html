@@ -747,7 +747,7 @@
                 <div class="action-grid" id="action-grid">
                     <button class="btn btn-warning" id="btn-clear">🗑 Clear</button>
                     <button class="btn btn-accent" id="btn-example">💡 Example</button>
-                    <button class="btn btn-accent" id="btn-import">📂 Import</button>
+                    <button class="btn btn-accent" id="btn-import">🔄 to WKT</button>
 
                     <div class="dropdown-container">
                         <button class="btn btn-accent" id="btn-copy-dropdown">📋 Copy ▼</button>
@@ -1735,12 +1735,40 @@
 
             // ---- New Feature Listeners ----
 
-            // Import button
-            const fileInput = document.getElementById('file-input');
+            // "to WKT" button: convert whatever is in the editor to WKT
             document.getElementById('btn-import').addEventListener('click', () => {
-                fileInput.click();
+                const textVal = editor.value.trim();
+                if (!textVal) {
+                    showToast('Spatial Input is empty.');
+                    return;
+                }
+                try {
+                    const activeProj = `EPSG:${currentEpsg}`;
+                    const geojson = parseInput(textVal, activeProj);
+                    if (!geojson) {
+                        showToast('Could not parse input.');
+                        return;
+                    }
+                    // Normalize FeatureCollection / Feature → raw geometry for wellknown
+                    let geom = geojson;
+                    if (geom.type === 'FeatureCollection') {
+                        geom = geom.features.length === 1
+                            ? geom.features[0].geometry
+                            : { type: 'GeometryCollection', geometries: geom.features.map(f => f.geometry) };
+                    } else if (geom.type === 'Feature') {
+                        geom = geom.geometry;
+                    }
+                    const wkt = wellknown.stringify(geom);
+                    editor.value = wkt;
+                    syncTextareaToMap();
+                    showToast('Converted to WKT');
+                } catch (e) {
+                    showToast('Conversion failed: ' + e.message);
+                }
             });
 
+            // Keep hidden file input wired (still used by drag-and-drop or other code paths)
+            const fileInput = document.getElementById('file-input');
             fileInput.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
