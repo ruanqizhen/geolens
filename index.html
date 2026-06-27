@@ -971,8 +971,15 @@
         const statusMessage = document.getElementById('status-message');
         const formatBadge = document.getElementById('format-badge');
 
-        const toast = document.getElementById('toast');
-        const toastText = document.getElementById('toast-text');
+        // toast / toastText are resolved lazily inside showToast() because the
+        // <div id="toast"> element lives at the bottom of <body> and is not yet
+        // in the DOM when this <script> block is parsed at page load time.
+        let toast = null;
+        let toastText = null;
+        function getToastElements() {
+            if (!toast)     toast     = document.getElementById('toast');
+            if (!toastText) toastText = document.getElementById('toast-text');
+        }
 
         const advOptionsHeader = document.getElementById('adv-options-header');
         const advOptionsBody = document.getElementById('adv-options-body');
@@ -1266,7 +1273,10 @@
             }
 
             // 3. Detect Geohash (standard base32 length 3 to 12)
-            if (/^[0-9b-hjkmnp-z]{3,12}$/i.test(inputStr)) {
+            // Guard: exclude known WKT geometry-type keywords that share characters
+            // with the geohash alphabet (e.g. POINT, POLYGON contain p, n, etc.).
+            const WKT_PREFIX_RE = /^(POINT|LINESTRING|POLYGON|MULTIPOINT|MULTILINESTRING|MULTIPOLYGON|GEOMETRYCOLLECTION|SRID=)/i;
+            if (!WKT_PREFIX_RE.test(inputStr) && /^[0-9b-hjkmnp-z]{3,12}$/i.test(inputStr)) {
                 formatBadge.textContent = "Geohash";
                 try {
                     const box = decodeGeohash(inputStr);
@@ -1291,7 +1301,7 @@
                 try {
                     const buffer = (typeof Buffer.from === 'function')
                         ? Buffer.from(inputStr, 'hex')
-                        : new Buffer(inputStr, 'hex');
+                        : Buffer.from(inputStr, 'hex'); // new Buffer() is deprecated
                     const geom = wkx.Geometry.parse(buffer);
                     const geojson = geom.toGeoJSON();
 
@@ -1314,7 +1324,12 @@
             // Strategy: decode base64 → raw bytes → hex string, then create a Buffer
             // from wkx's Browserify-bundled Buffer class so isBuffer() checks pass.
             const cleanStr = inputStr.replace(/\s+/g, '');
-            if (/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(cleanStr) && cleanStr.length >= 12) {
+            // Guard Base64: skip if the raw string looks like a WKT/EWKT keyword.
+            // Some WKT strings pass the base64 pattern test and would be silently
+            // mis-decoded before reaching the correct WKT branch below.
+            if (!WKT_PREFIX_RE.test(inputStr) &&
+                /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(cleanStr) &&
+                cleanStr.length >= 12) {
                 try {
                     // Decode base64 to raw bytes using the native atob()
                     const binString = atob(cleanStr);
@@ -1326,7 +1341,7 @@
                     // Create Buffer using the API available (Buffer.from for modern, constructor for old)
                     const buffer = (typeof Buffer.from === 'function')
                         ? Buffer.from(hexStr, 'hex')
-                        : new Buffer(hexStr, 'hex');
+                        : Buffer.from(hexStr, 'hex'); // new Buffer() is deprecated
                     const geom = wkx.Geometry.parse(buffer);
                     const geojson = geom.toGeoJSON();
 
@@ -1524,6 +1539,8 @@
         // Show toast alert (clears previous timer to prevent premature dismissal)
         let _toastTimer = null;
         function showToast(message) {
+            getToastElements(); // resolve lazily — toast div lives after this script block
+            if (!toast || !toastText) return; // guard: element may not exist
             if (_toastTimer) clearTimeout(_toastTimer);
             toastText.textContent = message;
             toast.classList.add('show');
