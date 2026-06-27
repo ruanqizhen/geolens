@@ -373,6 +373,11 @@
             gap: 0.75rem;
         }
 
+        /* Ensure the new 5-button layout still works in 2 columns */
+        .action-grid > .dropdown-container {
+            grid-column: span 2;
+        }
+
         .btn {
             display: flex;
             align-items: center;
@@ -643,6 +648,8 @@
         }
 
         .advanced-options-body {
+            /* max-height is driven dynamically by JS (scrollHeight) to avoid content
+               being clipped when the panel content grows beyond a fixed threshold. */
             max-height: 0;
             overflow: hidden;
             display: flex;
@@ -654,7 +661,7 @@
 
         .advanced-options-body.show {
             padding: 1rem;
-            max-height: 400px;
+            /* max-height set at runtime by JS */
         }
 
         /* Responsive Layout */
@@ -747,7 +754,8 @@
                 <div class="action-grid" id="action-grid">
                     <button class="btn btn-warning" id="btn-clear">🗑 Clear</button>
                     <button class="btn btn-accent" id="btn-example">💡 Example</button>
-                    <button class="btn btn-accent" id="btn-import">🔄 to WKT</button>
+                    <button class="btn btn-accent" id="btn-to-wkt">🔄 to WKT</button>
+
 
                     <div class="dropdown-container">
                         <button class="btn btn-accent" id="btn-copy-dropdown">📋 Copy ▼</button>
@@ -763,8 +771,6 @@
                     </div>
                 </div>
 
-                <!-- Hidden file input for import -->
-                <input type="file" id="file-input" accept=".wkt,.geojson,.json,.wkb,.txt" style="display: none;">
 
                 <!-- Validation & Feedback Banner -->
                 <div class="status-banner info" id="status-banner">
@@ -989,6 +995,13 @@
         const btnCopyDropdown = document.getElementById('btn-copy-dropdown');
         const copyMenu = document.getElementById('copy-menu');
 
+        // Read the accent color once from the CSS custom property so that all JS
+        // styling (Leaflet layers, Geoman paths, point markers) stays in sync with
+        // the design token defined in :root { --accent-color }. Theme changes that
+        // update --accent-color will be reflected on the next map initialisation.
+        const ACCENT_COLOR = getComputedStyle(document.documentElement)
+            .getPropertyValue('--accent-color').trim() || '#6366f1';
+
         // Initial Map Setup
         function initMap() {
             // Default center is WGS84 coordinates
@@ -1064,8 +1077,8 @@
 
             // Set drawing options
             map.pm.setPathOptions({
-                color: '#6366f1',
-                fillColor: '#6366f1',
+                color: ACCENT_COLOR,
+                fillColor: ACCENT_COLOR,
                 fillOpacity: 0.2
             });
 
@@ -1100,8 +1113,8 @@
                 // Set path styling for the newly drawn layer
                 if (layer.setStyle) {
                     layer.setStyle({
-                        color: '#6366f1',
-                        fillColor: '#6366f1',
+                        color: ACCENT_COLOR,
+                        fillColor: ACCENT_COLOR,
                         fillOpacity: 0.2
                     });
                 }
@@ -1117,15 +1130,28 @@
         }
 
         // Convert Leaflet Circle to GeoJSON Polygon (geodesic approximation)
+        // Uses a latitude-dependent WGS84 ellipsoid radius instead of a fixed
+        // sphere radius, significantly reducing error at high latitudes.
         function circleToGeoJSON(layer) {
             const center = layer.getLatLng();
             const radiusM = layer.getRadius();
             const segments = 64;
             const coords = [];
-            const R = 6371000; // Earth radius in meters
+
+            // WGS84 semi-major and semi-minor axes (metres)
+            const A = 6378137.0;     // equatorial radius
+            const B = 6356752.3142;  // polar radius
 
             const latRad = center.lat * Math.PI / 180;
             const lngRad = center.lng * Math.PI / 180;
+
+            // Radius of curvature in the prime vertical at this latitude
+            const sinLat = Math.sin(latRad);
+            const N = A / Math.sqrt(1 - (1 - (B / A) ** 2) * sinLat * sinLat);
+            // Mean radius at this latitude (geometric mean of meridional + prime-vertical radii)
+            const M = (B * B) / (A * Math.sqrt(1 - (1 - (B / A) ** 2) * sinLat * sinLat));
+            const R = Math.sqrt(M * N); // effective local Earth radius
+
             const angularDist = radiusM / R;
 
             for (let i = 0; i < segments; i++) {
@@ -1396,8 +1422,8 @@
 
             const leafletLayer = L.geoJSON(geojson, {
                 style: {
-                    color: '#6366f1',
-                    fillColor: '#6366f1',
+                    color: ACCENT_COLOR,
+                    fillColor: ACCENT_COLOR,
                     fillOpacity: 0.2,
                     weight: 3
                 },
@@ -1405,7 +1431,7 @@
                     // Render Point/MultiPoint as markers or circle markers
                     return L.circleMarker(latlng, {
                         radius: 7,
-                        fillColor: '#6366f1',
+                        fillColor: ACCENT_COLOR,
                         color: '#ffffff',
                         weight: 2,
                         opacity: 1,
@@ -1728,9 +1754,17 @@
             document.getElementById('btn-example').addEventListener('click', loadExample);
 
             // Toggle advanced options drawer accordion
+            // Use scrollHeight to set max-height dynamically — avoids the fixed
+            // 400px magic number that would clip content if the panel grows.
             advOptionsHeader.addEventListener('click', () => {
                 const isShow = advOptionsBody.classList.toggle('show');
                 advOptionsChevron.textContent = isShow ? "▲" : "▼";
+                if (isShow) {
+                    // Measure actual content height and animate to it
+                    advOptionsBody.style.maxHeight = advOptionsBody.scrollHeight + 'px';
+                } else {
+                    advOptionsBody.style.maxHeight = '0';
+                }
             });
 
 
@@ -1753,7 +1787,7 @@
             // ---- New Feature Listeners ----
 
             // "to WKT" button: convert whatever is in the editor to WKT
-            document.getElementById('btn-import').addEventListener('click', () => {
+            document.getElementById('btn-to-wkt').addEventListener('click', () => {
                 const textVal = editor.value.trim();
                 if (!textVal) {
                     showToast('Spatial Input is empty.');
@@ -1784,23 +1818,6 @@
                 }
             });
 
-            // Keep hidden file input wired (still used by drag-and-drop or other code paths)
-            const fileInput = document.getElementById('file-input');
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = function (ev) {
-                    editor.value = ev.target.result;
-                    syncTextareaToMap();
-                    showToast(`Imported: ${file.name}`);
-                };
-                reader.onerror = function () {
-                    showToast('Failed to read file.');
-                };
-                reader.readAsText(file);
-                fileInput.value = ''; // reset so same file can be re-imported
-            });
 
             // Close all dropdowns when clicking outside
             document.addEventListener('click', () => {
