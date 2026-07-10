@@ -1144,7 +1144,7 @@
             const sinLat = Math.sin(latRad);
             const N = A / Math.sqrt(1 - (1 - (B / A) ** 2) * sinLat * sinLat);
             // Mean radius at this latitude (geometric mean of meridional + prime-vertical radii)
-            const M = (B * B) / (A * Math.sqrt(1 - (1 - (B / A) ** 2) * sinLat * sinLat));
+            const M = (B * B) / (A * Math.pow(1 - (1 - (B / A) ** 2) * sinLat * sinLat, 1.5));
             const R = Math.sqrt(M * N); // effective local Earth radius
 
             const angularDist = radiusM / R;
@@ -1320,9 +1320,13 @@
             if (/^[0-9a-fA-F]+$/.test(inputStr)) {
                 formatBadge.textContent = "Hex WKB";
                 try {
-                    const buffer = (typeof Buffer.from === 'function')
-                        ? Buffer.from(inputStr, 'hex')
-                        : Buffer.from(inputStr, 'hex'); // new Buffer() is deprecated
+                    const BufferClass = window.Buffer || (typeof Buffer !== 'undefined' ? Buffer : null);
+                    if (!BufferClass) {
+                        throw new Error("WKB/EWKB binary parsing requires the Buffer library, which was not loaded.");
+                    }
+                    const buffer = (typeof BufferClass.from === 'function')
+                        ? BufferClass.from(inputStr, 'hex')
+                        : new BufferClass(inputStr, 'hex');
                     const geom = wkx.Geometry.parse(buffer);
                     const geojson = geom.toGeoJSON();
 
@@ -1330,6 +1334,11 @@
                     if (geom.srid) {
                         formatBadge.textContent = `EWKB (SRID:${geom.srid})`;
                         geomProj = `EPSG:${geom.srid}`;
+                        if (!proj4.defs(geomProj)) {
+                            epsgInput.value = geom.srid;
+                            loadEpsgDefinition(geom.srid.toString());
+                            throw new Error(`Loading CRS ${geomProj} from epsg.io. Please wait...`);
+                        }
                         if (geom.srid.toString() !== currentEpsg) {
                             epsgInput.value = geom.srid;
                             loadEpsgDefinition(geom.srid.toString());
@@ -1360,9 +1369,13 @@
                         hexStr += binString.charCodeAt(i).toString(16).padStart(2, '0');
                     }
                     // Create Buffer using the API available (Buffer.from for modern, constructor for old)
-                    const buffer = (typeof Buffer.from === 'function')
-                        ? Buffer.from(hexStr, 'hex')
-                        : Buffer.from(hexStr, 'hex'); // new Buffer() is deprecated
+                    const BufferClass = window.Buffer || (typeof Buffer !== 'undefined' ? Buffer : null);
+                    if (!BufferClass) {
+                        throw new Error("WKB/EWKB binary parsing requires the Buffer library, which was not loaded.");
+                    }
+                    const buffer = (typeof BufferClass.from === 'function')
+                        ? BufferClass.from(hexStr, 'hex')
+                        : new BufferClass(hexStr, 'hex');
                     const geom = wkx.Geometry.parse(buffer);
                     const geojson = geom.toGeoJSON();
 
@@ -1371,6 +1384,11 @@
                     if (geom.srid) {
                         formatBadge.textContent = `Base64 EWKB (SRID:${geom.srid})`;
                         geomProj = `EPSG:${geom.srid}`;
+                        if (!proj4.defs(geomProj)) {
+                            epsgInput.value = geom.srid;
+                            loadEpsgDefinition(geom.srid.toString());
+                            throw new Error(`Loading CRS ${geomProj} from epsg.io. Please wait...`);
+                        }
                         if (geom.srid.toString() !== currentEpsg) {
                             epsgInput.value = geom.srid;
                             loadEpsgDefinition(geom.srid.toString());
@@ -1391,12 +1409,18 @@
                 let geomProj = activeProj;
                 const sridMatch = inputStr.match(/^SRID=(\d+);(.*)/i);
                 if (sridMatch) {
-                    formatBadge.textContent = `EWKT (SRID:${sridMatch[1]})`;
-                    geomProj = `EPSG:${sridMatch[1]}`;
+                    const sridCode = sridMatch[1];
+                    formatBadge.textContent = `EWKT (SRID:${sridCode})`;
+                    geomProj = `EPSG:${sridCode}`;
                     wktStr = sridMatch[2];
-                    if (sridMatch[1] !== currentEpsg) {
-                        epsgInput.value = sridMatch[1];
-                        loadEpsgDefinition(sridMatch[1]);
+                    if (!proj4.defs(geomProj)) {
+                        epsgInput.value = sridCode;
+                        loadEpsgDefinition(sridCode);
+                        throw new Error(`Loading CRS ${geomProj} from epsg.io. Please wait...`);
+                    }
+                    if (sridCode !== currentEpsg) {
+                        epsgInput.value = sridCode;
+                        loadEpsgDefinition(sridCode);
                     }
                 }
 
@@ -1552,7 +1576,12 @@
                     showStatus('success', 'Parsed Successfully', `Visualized ${featureCount} ${geomType} feature(s) on the map.`);
                 }
             } catch (e) {
-                showStatus('error', 'Parsing Failure', e.message);
+                if (e.message && e.message.startsWith('Loading CRS')) {
+                    drawnItems.clearLayers();
+                    showStatus('info', 'Resolving CRS...', e.message);
+                } else {
+                    showStatus('error', 'Parsing Failure', e.message);
+                }
             }
             saveCurrentState();
         }
@@ -1582,9 +1611,9 @@
         function loadEpsgDefinition(epsgCode, onComplete) {
             epsgCode = epsgCode.trim();
             if (!epsgCode) return;
-            // Validate EPSG code format (4-5 digits, numeric)
-            if (!/^\d{4,5}$/.test(epsgCode)) {
-                showStatus('error', 'Invalid EPSG Code', `"${epsgCode}" is not a valid EPSG code. Expected 4-5 digit number (e.g. 4326).`);
+            // Validate EPSG code format (3-6 digits, numeric)
+            if (!/^\d{3,6}$/.test(epsgCode)) {
+                showStatus('error', 'Invalid EPSG Code', `"${epsgCode}" is not a valid EPSG code. Expected 3-6 digit number (e.g. 4326).`);
                 return;
             }
 
