@@ -316,7 +316,8 @@
             gap: 0.5rem;
         }
 
-        input[type="text"] {
+        input[type="text"],
+        input[type="password"] {
             width: 100%;
             background-color: var(--input-bg);
             border: 1px solid var(--border-color);
@@ -329,7 +330,8 @@
             transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
         }
 
-        input[type="text"]:focus {
+        input[type="text"]:focus,
+        input[type="password"]:focus {
             border-color: var(--accent-color);
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
             background-color: var(--input-bg-focus);
@@ -798,6 +800,21 @@
                             <label for="proj4-def">Proj4 Definition (Editable)</label>
                             <textarea id="proj4-def" placeholder="+proj=longlat +datum=WGS84 +no_defs"></textarea>
                         </div>
+
+                        <!-- Map Tile Configuration -->
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label for="carto-key">CARTO Basemap API Key (Optional)</label>
+                            <div class="input-row">
+                                <div class="input-field-wrapper">
+                                    <span class="input-label-small">API Key</span>
+                                    <input type="password" id="carto-key" placeholder="Defaults to Esri Canvas (No key needed)">
+                                </div>
+                                <button class="btn-fetch" id="btn-save-key" title="Save and Apply API Key">Apply</button>
+                            </div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem; line-height: 1.4;">
+                                Default uses Esri Canvas (free, no key required). If you have a CARTO key from <a href="https://carto.com/basemaps/apikey" target="_blank" rel="noopener noreferrer" style="color: var(--accent-color); text-decoration: underline;">carto.com/basemaps/apikey</a>, enter it here.
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -882,6 +899,10 @@
         let currentEpsg = '4326';
         let darkLayer;
         let lightLayer;
+        let osmLayer;
+        let topoLayer;
+        let satelliteLayer;
+        let layerControl;
 
         // Utility: throttle high-frequency event callbacks
         function throttle(fn, delay) {
@@ -932,6 +953,84 @@
         function toggleTheme() {
             const isLight = document.documentElement.classList.contains('light-theme');
             setTheme(isLight ? 'dark' : 'light');
+        }
+
+        // Base Layer Factory: Esri Canvas (Default, free & no key required) or CARTO (if API key is supplied)
+        function createSleekLayers(cartoKey) {
+            if (cartoKey && cartoKey.trim()) {
+                const key = encodeURIComponent(cartoKey.trim());
+                return {
+                    dark: L.tileLayer(`https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${key}`, {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        subdomains: 'abcd',
+                        maxZoom: 22
+                    }),
+                    light: L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${key}`, {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                        subdomains: 'abcd',
+                        maxZoom: 22
+                    })
+                };
+            }
+            return {
+                dark: L.layerGroup([
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 22,
+                        maxNativeZoom: 16,
+                        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
+                    }),
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 22,
+                        maxNativeZoom: 16,
+                        pane: 'tilePane'
+                    })
+                ]),
+                light: L.layerGroup([
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 22,
+                        maxNativeZoom: 16,
+                        attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ'
+                    }),
+                    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+                        maxZoom: 22,
+                        maxNativeZoom: 16,
+                        pane: 'tilePane'
+                    })
+                ])
+            };
+        }
+
+        // Dynamically update basemaps when user provides or removes CARTO API key
+        function updateBaseLayers(cartoKey) {
+            if (!map) return;
+            const isLight = document.documentElement.classList.contains('light-theme');
+            const hadDark = darkLayer && map.hasLayer(darkLayer);
+            const hadLight = lightLayer && map.hasLayer(lightLayer);
+
+            if (hadDark) map.removeLayer(darkLayer);
+            if (hadLight) map.removeLayer(lightLayer);
+
+            const newLayers = createSleekLayers(cartoKey);
+            darkLayer = newLayers.dark;
+            lightLayer = newLayers.light;
+
+            if (layerControl) {
+                map.removeControl(layerControl);
+            }
+            const baseMaps = {
+                "Sleek Dark": darkLayer,
+                "Sleek Light": lightLayer,
+                "OpenStreetMap": osmLayer,
+                "Terrain Topo": topoLayer,
+                "Satellite Imagery": satelliteLayer
+            };
+            layerControl = L.control.layers(baseMaps).addTo(map);
+
+            if (isLight) {
+                if (hadDark || hadLight) lightLayer.addTo(map);
+            } else {
+                if (hadDark || hadLight) darkLayer.addTo(map);
+            }
         }
 
         // Initialize Theme early to prevent flash
@@ -1008,31 +1107,24 @@
             });
 
             // Base Layers definitions
-            const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 22,
-                attribution: '© OpenStreetMap contributors'
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             });
 
-            const topo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
                 maxZoom: 22,
-                attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
+                attribution: 'Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
             });
 
-            const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             });
 
-            darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 22
-            });
-
-            lightLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-                subdomains: 'abcd',
-                maxZoom: 22
-            });
+            const savedCartoKey = (localStorage.getItem('geolens_carto_key') || '').trim();
+            const initialLayers = createSleekLayers(savedCartoKey);
+            darkLayer = initialLayers.dark;
+            lightLayer = initialLayers.light;
 
             // Add correct default layer based on active theme
             const isLightTheme = document.documentElement.classList.contains('light-theme');
@@ -1045,12 +1137,12 @@
             const baseMaps = {
                 "Sleek Dark": darkLayer,
                 "Sleek Light": lightLayer,
-                "OpenStreetMap": osm,
-                "Terrain Topo": topo,
-                "Satellite Imagery": satellite
+                "OpenStreetMap": osmLayer,
+                "Terrain Topo": topoLayer,
+                "Satellite Imagery": satelliteLayer
             };
 
-            L.control.layers(baseMaps).addTo(map);
+            layerControl = L.control.layers(baseMaps).addTo(map);
 
             // Group for drawn items
             drawnItems = L.featureGroup().addTo(map);
@@ -1681,6 +1773,12 @@
                 const savedEditor = localStorage.getItem('wkt_viewer_editor_val');
                 const savedEpsg = localStorage.getItem('wkt_viewer_epsg_val');
                 const savedProj4 = localStorage.getItem('wkt_viewer_proj4_val');
+                const savedCartoKey = localStorage.getItem('geolens_carto_key');
+
+                const cartoKeyInput = document.getElementById('carto-key');
+                if (cartoKeyInput && savedCartoKey) {
+                    cartoKeyInput.value = savedCartoKey;
+                }
 
                 if (savedEpsg) {
                     epsgInput.value = savedEpsg;
@@ -1790,6 +1888,32 @@
                     advOptionsBody.style.maxHeight = '0';
                 }
             });
+
+            // CARTO API Key input & apply
+            const cartoKeyInput = document.getElementById('carto-key');
+            const btnSaveKey = document.getElementById('btn-save-key');
+            if (btnSaveKey && cartoKeyInput) {
+                const applyKeyAction = () => {
+                    const keyVal = cartoKeyInput.value.trim();
+                    if (keyVal) {
+                        localStorage.setItem('geolens_carto_key', keyVal);
+                        updateBaseLayers(keyVal);
+                        showToast('CARTO API key applied!');
+                    } else {
+                        localStorage.removeItem('geolens_carto_key');
+                        updateBaseLayers('');
+                        showToast('Reverted to Esri Canvas basemap.');
+                    }
+                };
+
+                btnSaveKey.addEventListener('click', applyKeyAction);
+                cartoKeyInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        applyKeyAction();
+                    }
+                });
+            }
 
 
 
